@@ -12,6 +12,7 @@ use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\VehicleController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\PasswordController;
+use App\Http\Controllers\Auth\PasswordResetController;
 use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\AzampayWebhookController;
 use App\Http\Controllers\Customer\DashboardController as CustomerDashboard;
@@ -30,6 +31,15 @@ Route::middleware('guest')->group(function () {
 
     Route::get('login', [LoginController::class, 'create'])->name('login');
     Route::post('login', [LoginController::class, 'store']);
+
+    // FR1: self-service password recovery. POST sides are throttled so the
+    // mailer and the token table cannot be spammed.
+    Route::get('forgot-password', [PasswordResetController::class, 'create'])->name('password.request');
+    Route::post('forgot-password', [PasswordResetController::class, 'store'])
+        ->middleware('throttle:6,1')->name('password.email');
+    Route::get('reset-password/{token}', [PasswordResetController::class, 'createReset'])->name('password.reset');
+    Route::post('reset-password', [PasswordResetController::class, 'reset'])
+        ->middleware('throttle:6,1')->name('password.update');
 });
 
 Route::post('logout', [LoginController::class, 'destroy'])->middleware('auth')->name('logout');
@@ -39,7 +49,7 @@ Route::post('logout', [LoginController::class, 'destroy'])->middleware('auth')->
 | Customer area
 |----------------------------------------------------------------------
 */
-Route::middleware(['auth', 'role:customer'])->group(function () {
+Route::middleware(['auth', 'active', 'role:customer'])->group(function () {
     Route::get('dashboard', [CustomerDashboard::class, 'index'])->name('customer.dashboard');
 
     Route::get('reservations', [CustomerReservation::class, 'index'])->name('customer.reservations.index');
@@ -68,7 +78,7 @@ Route::post('webhooks/azampay', AzampayWebhookController::class)->name('webhooks
 | Every signed-in user (customers and staff)
 |----------------------------------------------------------------------
 */
-Route::middleware('auth')->group(function () {
+Route::middleware(['auth', 'active'])->group(function () {
     Route::get('profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::put('profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::put('profile/password', [PasswordController::class, 'update'])->name('profile.password.update');

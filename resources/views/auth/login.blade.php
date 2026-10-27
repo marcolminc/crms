@@ -31,6 +31,7 @@
                            @checked(old('remember'))
                            class="h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500">
                     <label for="remember" class="text-sm text-slate-700">Keep me logged in</label>
+                    <a href="{{ route('password.request') }}" class="ml-auto text-sm font-medium text-emerald-700 hover:underline">Forgot password?</a>
                 </div>
 
                 <button type="submit"

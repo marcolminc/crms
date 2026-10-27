@@ -84,12 +84,17 @@
                                         </form>
                                     @endif
 
-                                    <form method="POST" action="{{ route('admin.users.destroy', $user) }}" class="ml-1 inline"
-                                          onsubmit="return confirm('Delete {{ $user->name }}? Any linked customer profile and its reservations and rentals are deleted with the account.')">
-                                        @csrf
-                                        @method('DELETE')
-                                        <button type="submit" class="rounded-lg border border-rose-200 px-3 py-1 text-xs font-medium text-rose-700 hover:bg-rose-50">Delete</button>
-                                    </form>
+                                    @if ($user->customer?->reservations()->exists() || $user->customer?->rentals()->exists())
+                                        {{-- Mirrors the destroy() guard: booking history must survive for reporting. --}}
+                                        <span class="ml-1 inline-block cursor-help text-xs text-slate-400" title="This account belongs to a customer with booking history, so it can only be deactivated — records stay available for reporting.">Delete blocked</span>
+                                    @else
+                                        <form method="POST" action="{{ route('admin.users.destroy', $user) }}" class="ml-1 inline"
+                                              onsubmit="return confirm('Delete {{ $user->name }} permanently? This cannot be undone.')">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit" class="rounded-lg border border-rose-200 px-3 py-1 text-xs font-medium text-rose-700 hover:bg-rose-50">Delete</button>
+                                        </form>
+                                    @endif
                                 @endunless
                             </td>
                         </tr>

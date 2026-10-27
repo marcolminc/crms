@@ -31,13 +31,17 @@
                 ['label' => 'Payments', 'route' => 'admin.payments.index'],
                 ['label' => 'Reports', 'route' => 'admin.reports.index'],
             ],
-            'People' => array_values(array_filter([
+            'People' => [
                 ['label' => 'Customers', 'route' => 'admin.customers.index'],
-                $user->hasRole(\App\Enums\UserRole::Admin)
-                    ? ['label' => 'Users & roles', 'route' => 'admin.users.index']
-                    : null,
-            ])),
+            ],
         ];
+        // FR1: user and role management is the administrator's distinctive duty,
+        // so it leads the menu in its own group instead of hiding among "People".
+        if ($user->hasRole(\App\Enums\UserRole::Admin)) {
+            $groups = ['Administration' => [
+                ['label' => 'Users & roles', 'route' => 'admin.users.index'],
+            ]] + $groups;
+        }
     } elseif ($user?->isDriver()) {
         // The trip-log portal (UC24) is not built yet; drivers keep account tools only.
         $home = ['label' => 'Alerts', 'route' => 'notifications.index'];
