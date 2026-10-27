@@ -122,20 +122,25 @@
                 </a>
             </div>
 
-            <div class="flex items-center gap-2 sm:gap-3">
+            <div class="flex items-center gap-2.5 sm:gap-3">
                 @auth
-                    <a href="{{ route('notifications.index') }}" class="relative rounded-lg p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-900" aria-label="Notifications">
+                    <a href="{{ route('notifications.index') }}" class="relative inline-flex rounded-lg p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-900" aria-label="Notifications{{ $unread > 0 ? ' ('.$unread.' unread)' : '' }}">
                         <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0"/>
                         </svg>
                         @if ($unread > 0)
-                            <span class="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-600 px-1 text-[10px] font-semibold text-white">{{ $unread }}</span>
+                            <span class="absolute right-0 top-0 z-10 flex h-4 min-w-4 -translate-y-1/3 translate-x-1/3 items-center justify-center rounded-full bg-rose-600 px-1 text-[10px] font-semibold leading-none text-white ring-2 ring-white">
+                                {{ $unread > 99 ? '99+' : $unread }}
+                            </span>
                         @endif
                     </a>
 
+                    {{-- Visual separator between alerts and the account chip --}}
+                    <span class="h-6 w-px bg-slate-200" aria-hidden="true"></span>
+
                     <div class="relative" data-menu-root>
                         <button type="button" data-menu-toggle aria-haspopup="true"
-                                class="flex items-center gap-2 rounded-full border border-slate-200 py-1 pl-1 pr-2 text-sm font-medium text-slate-700 hover:bg-slate-50">
+                                class="flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 py-1 pl-1 pr-2 text-sm font-medium text-slate-700 hover:border-emerald-300 hover:bg-emerald-50/50">
                             <span class="flex h-7 w-7 items-center justify-center rounded-full bg-emerald-700 text-xs font-semibold text-white">
                                 {{ strtoupper(substr($user->name, 0, 1)) }}
                             </span>
