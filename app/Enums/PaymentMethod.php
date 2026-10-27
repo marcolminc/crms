@@ -49,8 +49,10 @@ enum PaymentMethod: string
     {
         return match ($this) {
             self::Mpesa => 'M-Pesa',
-            self::TigoPesa => 'TigoPesa',
-            self::AirtelMoney => 'Airtel Money',
+            // Names must match the gateway's payment-partner registry
+            // (GET /api/v1/Partner/GetPaymentPartners): Tigopesa, Airtel, HaloPesa.
+            self::TigoPesa => 'Tigopesa',
+            self::AirtelMoney => 'Airtel',
             self::HaloPesa => 'Halopesa',
             default => null,
         };

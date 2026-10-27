@@ -31,11 +31,11 @@ class OnlinePaymentTest extends TestCase
 
     private const AUTH = 'https://authenticator.azampay.test/AppRegistration/GenerateToken';
 
-    private const PUSH = self::BASE.'/api/v1/Checkout/GetMobileNumber';
+    private const PUSH = self::BASE.'/azampay/mno/checkout';
 
-    private const HOSTED = self::BASE.'/api/v1/Checkout/PostCheckout';
+    private const HOSTED = self::BASE.'/api/v1/Partner/PostCheckout';
 
-    private const VERIFY = self::BASE.'/api/v1/TransactionStatus/GetTransactionStatus';
+    private const VERIFY = self::BASE.'/api/v1/Partner/GetTransactionStatus';
 
     private const LINK = 'https://checkout.azampay.test/pay/mock';
 
@@ -287,7 +287,7 @@ class OnlinePaymentTest extends TestCase
 
         Http::assertSent(fn ($request): bool => $request->url() === self::PUSH
             && $request->data()['amount'] === '80000.00'
-            && $request->data()['provider'] === 'TigoPesa');
+            && $request->data()['provider'] === 'Tigopesa');
     }
 
     public function test_a_cancelled_rental_is_closed_to_online_payment(): void

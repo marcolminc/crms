@@ -21,7 +21,7 @@ class ReconcilePendingPaymentsTest extends TestCase
 
     private const AUTH = 'https://authenticator.azampay.test/AppRegistration/GenerateToken';
 
-    private const VERIFY = self::BASE.'/api/v1/TransactionStatus/GetTransactionStatus';
+    private const VERIFY = self::BASE.'/api/v1/Partner/GetTransactionStatus';
 
     protected function setUp(): void
     {

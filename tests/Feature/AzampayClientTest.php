@@ -18,13 +18,13 @@ class AzampayClientTest extends TestCase
 
     private const AUTH = 'https://authenticator.azampay.test/AppRegistration/GenerateToken';
 
-    private const PUSH = self::BASE.'/api/v1/Checkout/GetMobileNumber';
+    private const PUSH = self::BASE.'/azampay/mno/checkout';
 
-    private const HOSTED = self::BASE.'/api/v1/Checkout/PostCheckout';
+    private const HOSTED = self::BASE.'/api/v1/Partner/PostCheckout';
 
-    private const VERIFY = self::BASE.'/api/v1/TransactionStatus/GetTransactionStatus';
+    private const VERIFY = self::BASE.'/api/v1/Partner/GetTransactionStatus';
 
-    private const DISBURSE = self::BASE.'/api/v1/Disbursement/InitiateDisbursement';
+    private const DISBURSE = self::BASE.'/api/v1/Disbursement/Disburse';
 
     protected function setUp(): void
     {

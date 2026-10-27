@@ -21,7 +21,7 @@ class RefundServiceTest extends TestCase
 
     private const AUTH = 'https://authenticator.azampay.test/AppRegistration/GenerateToken';
 
-    private const DISBURSE = self::BASE.'/api/v1/Disbursement/InitiateDisbursement';
+    private const DISBURSE = self::BASE.'/api/v1/Disbursement/Disburse';
 
     protected function setUp(): void
     {

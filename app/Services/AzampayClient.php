@@ -22,6 +22,12 @@ final class AzampayClient
 {
     private const CONNECT_TIMEOUT = 3;
 
+    /**
+     * The sandbox dials the payer's handset before it accepts the push; observed
+     * acceptance took 30-90s, far beyond the ordinary request budget.
+     */
+    private const PUSH_TIMEOUT = 120;
+
     private const REQUEST_TIMEOUT = 15;
 
     private const TOKEN_CACHE_KEY = 'azampay.access_token';
@@ -70,7 +76,7 @@ final class AzampayClient
         }
 
         try {
-            $response = $this->http($token)->post($this->url('api/v1/Checkout/GetMobileNumber'), [
+            $response = $this->http($token)->timeout(self::PUSH_TIMEOUT)->post($this->url('azampay/mno/checkout'), [
                 'accountNumber' => (string) $request->phoneNumber,
                 'amount' => number_format($request->amount, 2, '.', ''),
                 'currency' => $request->currency,
@@ -117,7 +123,7 @@ final class AzampayClient
         }
 
         try {
-            $response = $this->http($token)->post($this->url('api/v1/Checkout/PostCheckout'), [
+            $response = $this->http($token)->post($this->url('api/v1/Partner/PostCheckout'), [
                 'amount' => number_format($request->amount, 2, '.', ''),
                 'appName' => (string) $this->configValue('app_name'),
                 'cart' => ['items' => [['name' => $request->name !== '' ? $request->name : 'Car rental payment']]],
@@ -166,7 +172,7 @@ final class AzampayClient
         }
 
         try {
-            $response = $this->http($token)->get($this->url('api/v1/TransactionStatus/GetTransactionStatus'), [
+            $response = $this->http($token)->get($this->url('api/v1/Partner/GetTransactionStatus'), [
                 'pgReferenceId' => $reference,
             ]);
         } catch (ConnectionException $exception) {
@@ -226,7 +232,7 @@ final class AzampayClient
         ];
 
         try {
-            $response = $this->http($token)->post($this->url('api/v1/Disbursement/InitiateDisbursement'), [
+            $response = $this->http($token)->post($this->url('api/v1/Disbursement/Disburse'), [
                 'source' => $account,
                 'destination' => [
                     'accountNumber' => $payout->destinationAccount,
