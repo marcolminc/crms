@@ -21,12 +21,40 @@ class NotificationService
     }
 
     /**
-     * Every staff account that oversees the vehicle fleet.
+     * Every staff account that oversees the vehicle fleet. The Admin is
+     * deliberately excluded: per design doc §2 the administrator runs the
+     * system (users, roles, oversight), not day-to-day fleet operations.
      */
     public function fleetTeam(): array
     {
         return User::query()
-            ->whereIn('role', [UserRole::Admin, UserRole::FleetStaff, UserRole::CounterAgent])
+            ->whereIn('role', [UserRole::FleetStaff, UserRole::CounterAgent])
+            ->where('is_active', true)
+            ->pluck('id')
+            ->all();
+    }
+
+    /**
+     * The actors who work reservations and rentals at the desk: counter
+     * agents execute them, branch managers approve them (design doc §2).
+     */
+    public function bookingDesk(): array
+    {
+        return User::query()
+            ->whereIn('role', [UserRole::CounterAgent, UserRole::BranchManager])
+            ->where('is_active', true)
+            ->pluck('id')
+            ->all();
+    }
+
+    /**
+     * Money matters that need a human: the accountant reconciles, the
+     * administrator is told because gateway outages are system incidents.
+     */
+    public function paymentDesk(): array
+    {
+        return User::query()
+            ->whereIn('role', [UserRole::Finance, UserRole::Admin])
             ->where('is_active', true)
             ->pluck('id')
             ->all();

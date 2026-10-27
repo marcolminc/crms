@@ -80,7 +80,14 @@ class User extends Authenticatable
         return $this->notifications()->create([
             'title' => $title,
             'message' => $message,
-            'link' => $link,
+            // Store path+query only. An absolute URL freezes the host that
+            // happened to serve the creating request (localhost vs the ngrok
+            // tunnel); clicking it later hops the user onto a different
+            // cookie domain, where their session — and role — is not the
+            // one they expect. Relative links resolve on whatever host the
+            // reader is browsing, keeping them inside their own session.
+            'link' => $link === null ? null : (string) parse_url($link, PHP_URL_PATH)
+                . (parse_url($link, PHP_URL_QUERY) ? '?'.parse_url($link, PHP_URL_QUERY) : ''),
             'type' => $type,
         ]);
     }

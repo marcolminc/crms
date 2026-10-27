@@ -231,7 +231,7 @@ final class OnlinePaymentService
         $this->payments->announce($payment, route('customer.rentals.index'));
 
         if ($recordable < (float) $intent->amount - self::AMOUNT_TOLERANCE) {
-            $this->alertFleet(
+            $this->alertPaymentDesk(
                 'Online payment captured below the checkout amount',
                 'Rental '.$rental->id.' took '.number_format($recordable, 0).' TZS of the '
                     .number_format((float) $intent->amount, 0).' TZS AzamPay confirmed.'
@@ -282,16 +282,16 @@ final class OnlinePaymentService
         ]);
 
         if ($needsAttention) {
-            $this->alertFleet('AzamPay confirmation refused', $outcome->label().' — intent '.$intent->id.' ('.$intent->tx_ref.').');
+            $this->alertPaymentDesk('AzamPay confirmation refused', $outcome->label().' — intent '.$intent->id.' ('.$intent->tx_ref.').');
         }
 
         return $outcome;
     }
 
-    private function alertFleet(string $title, string $message): void
+    private function alertPaymentDesk(string $title, string $message): void
     {
         $this->notifications->forUsers(
-            $this->notifications->fleetTeam(),
+            $this->notifications->paymentDesk(),
             $title,
             $message,
             route('admin.payments.index'),

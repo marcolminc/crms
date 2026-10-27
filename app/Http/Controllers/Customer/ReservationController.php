@@ -91,7 +91,7 @@ final class ReservationController extends Controller
         ]);
 
         $notifications->forUsers(
-            $notifications->fleetTeam(),
+            $notifications->bookingDesk(),
             'New reservation awaiting confirmation',
             $customer->display_name.' requested '.$vehicle->display_name
                 .' from '.$start->format('d M Y').' to '.$end->format('d M Y').'.',
@@ -129,7 +129,7 @@ final class ReservationController extends Controller
         $reservation->update(['status' => ReservationStatus::Cancelled]);
 
         $notifications->forUsers(
-            $notifications->fleetTeam(),
+            $notifications->bookingDesk(),
             'Reservation cancelled',
             ($reservation->customer->display_name ?? 'A customer')
                 .' cancelled reservation #'.$reservation->id
