@@ -73,6 +73,10 @@
                             <td class="py-3 whitespace-nowrap">
                                 <a href="{{ route('admin.reservations.show', $reservation) }}"
                                    class="rounded-lg border border-slate-300 px-3 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50">Review</a>
+                                @if ($reservation->status === \App\Enums\ReservationStatus::Confirmed && $reservation->end_date->gte(now()->startOfDay()))
+                                    <a href="{{ route('admin.rentals.create', ['reservation' => $reservation->id]) }}"
+                                       class="rounded-lg bg-emerald-600 px-3 py-1 text-xs font-semibold text-white hover:bg-emerald-700">Start rental</a>
+                                @endif
                             </td>
                         </tr>
                     @empty

@@ -87,6 +87,45 @@ class RentalFlowTest extends TestCase
         $this->assertSame(ReservationStatus::Completed, $reservation->fresh()->status);
     }
 
+    public function test_the_conversion_entry_points_are_visible_to_the_desk(): void
+    {
+        $staff = $this->staff();
+        $customer = $this->customer();
+        $vehicle = Vehicle::factory()->available()->create();
+        $reservation = Reservation::factory()->create([
+            'customer_id' => $customer->id,
+            'vehicle_id' => $vehicle->id,
+            'start_date' => now()->toDateString(),
+            'end_date' => now()->addDays(2)->toDateString(),
+            'status' => ReservationStatus::Confirmed,
+        ]);
+
+        // The list row and the show page both advertise the conversion.
+        $this->actingAs($staff)->get('/admin/reservations')
+            ->assertOk()
+            ->assertSee('Start rental');
+        $this->actingAs($staff)->get(route('admin.reservations.show', $reservation))
+            ->assertOk()
+            ->assertSee('Convert to rental');
+
+        // Following it opens the rental form in conversion mode, prefilled.
+        $this->actingAs($staff)->get(route('admin.rentals.create', ['reservation' => $reservation->id]))
+            ->assertOk()
+            ->assertSee('Converting reservation #'.$reservation->id);
+
+        // A pending reservation offers no conversion.
+        $pending = Reservation::factory()->create([
+            'customer_id' => $customer->id,
+            'vehicle_id' => Vehicle::factory()->available()->create()->id,
+            'start_date' => now()->addDays(5)->toDateString(),
+            'end_date' => now()->addDays(7)->toDateString(),
+            'status' => ReservationStatus::Pending,
+        ]);
+        $this->actingAs($staff)->get(route('admin.reservations.show', $pending))
+            ->assertOk()
+            ->assertDontSee('Convert to rental');
+    }
+
     public function test_overlapping_active_rental_blocks_a_second_hire_out(): void
     {
         $staff = $this->staff();

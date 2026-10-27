@@ -26,9 +26,12 @@
 
     <x-card class="mb-6" title="Pick a period to refresh available vehicles">
         <form method="GET" action="{{ route('admin.rentals.create') }}" class="grid gap-2 sm:grid-cols-3 lg:items-end">
-            @if ($reservation)
-                <input type="hidden" name="reservation" value="{{ $reservation->id }}">
-            @endif
+            <div class="mb-4">
+                <label for="f_reservation" class="mb-1 block text-sm font-medium text-slate-700">Reservation #</label>
+                <input id="f_reservation" name="reservation" type="number" min="1" value="{{ request('reservation') }}"
+                       placeholder="Convert a confirmed one"
+                       class="{{ $selectClass }}">
+            </div>
             <div class="mb-4">
                 <label for="f_customer" class="mb-1 block text-sm font-medium text-slate-700">Customer</label>
                 <select id="f_customer" name="customer" class="{{ $selectClass }}">

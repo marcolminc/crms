@@ -9,6 +9,11 @@
     $rental = $reservation->rental;
     $canConfirm = $reservation->status === \App\Enums\ReservationStatus::Pending;
     $canReject = $reservation->status === \App\Enums\ReservationStatus::Pending;
+    // Pickup-day path: a confirmed, unexpired reservation converts on the
+    // rental form; mirrors RentalController::create()'s acceptance checks.
+    $canConvert = $reservation->status === \App\Enums\ReservationStatus::Confirmed
+        && ! $rental
+        && $reservation->end_date->gte(now()->startOfDay());
     $canCancel = in_array($reservation->status, [\App\Enums\ReservationStatus::Pending, \App\Enums\ReservationStatus::Confirmed], true) && ! $rental;
     $canDelete = in_array($reservation->status, [\App\Enums\ReservationStatus::Cancelled, \App\Enums\ReservationStatus::Rejected, \App\Enums\ReservationStatus::Completed], true) && ! $rental;
 @endphp
@@ -150,6 +155,13 @@
             </x-card>
 
             <x-card title="Actions">
+                @if ($canConvert)
+                    <a href="{{ route('admin.rentals.create', ['reservation' => $reservation->id]) }}"
+                       class="mb-3 block w-full rounded-lg bg-emerald-600 px-4 py-2 text-center text-sm font-semibold text-white shadow-sm hover:bg-emerald-700">
+                        Convert to rental
+                    </a>
+                @endif
+
                 @if ($canConfirm)
                     <form method="POST" action="{{ route('admin.reservations.confirm', $reservation) }}" class="mb-3">
                         @csrf
