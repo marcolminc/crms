@@ -202,15 +202,17 @@ class PaymentRecordingServiceTest extends TestCase
         ));
         $this->ledger->announce($counter, route('admin.payments.receipt', $counter));
 
+        // recordAlert stores links host-relative so they resolve on every
+        // hostname the app is reached through.
         $this->assertDatabaseHas('notifications', [
             'user_id' => $rental->customer->user_id,
             'type' => 'payment_recorded',
-            'link' => route('customer.rentals.index'),
+            'link' => (string) parse_url(route('customer.rentals.index'), PHP_URL_PATH),
         ]);
         $this->assertDatabaseHas('notifications', [
             'user_id' => $rental->customer->user_id,
             'type' => 'payment_recorded',
-            'link' => route('admin.payments.receipt', $counter),
+            'link' => (string) parse_url(route('admin.payments.receipt', $counter), PHP_URL_PATH),
         ]);
     }
 }

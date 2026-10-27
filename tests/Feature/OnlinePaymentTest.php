@@ -482,7 +482,7 @@ class OnlinePaymentTest extends TestCase
         $this->assertDatabaseHas('notifications', [
             'user_id' => $rental->customer->user_id,
             'type' => 'payment_recorded',
-            'link' => route('customer.rentals.index'),
+            'link' => '/rentals',
         ]);
 
         // The callback is journalled verbatim and marked handled (design 5.3).
@@ -621,6 +621,7 @@ class OnlinePaymentTest extends TestCase
 
     public function test_money_that_does_not_match_the_checkout_amount_is_refused(): void
     {
+        User::factory()->finance()->create();
         $rental = $this->rentalOwing(200000);
         $intent = $this->openPush($rental);
         $this->fakeVerify($intent, ['amount' => 199000]);
@@ -636,6 +637,7 @@ class OnlinePaymentTest extends TestCase
 
     public function test_money_in_another_currency_is_refused(): void
     {
+        User::factory()->finance()->create();
         $rental = $this->rentalOwing(200000);
         $intent = $this->openPush($rental);
         $this->fakeVerify($intent, ['currency' => 'USD']);
@@ -664,6 +666,7 @@ class OnlinePaymentTest extends TestCase
 
     public function test_a_confirmation_for_a_cancelled_rental_is_refused(): void
     {
+        User::factory()->finance()->create();
         $rental = $this->rentalOwing(200000);
         $intent = $this->openPush($rental);
         $rental->update(['status' => RentalStatus::Cancelled]);
@@ -679,6 +682,7 @@ class OnlinePaymentTest extends TestCase
 
     public function test_money_that_arrived_after_the_office_cleared_the_balance_is_refused(): void
     {
+        User::factory()->finance()->create();
         $rental = $this->rentalOwing(200000);
         $intent = $this->openPush($rental);
         $this->counterRecords($rental->fresh(), 200000);

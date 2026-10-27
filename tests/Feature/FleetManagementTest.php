@@ -107,8 +107,9 @@ class FleetManagementTest extends TestCase
     public function test_taking_a_vehicle_out_of_service_alerts_the_fleet_team(): void
     {
         $manager = $this->fleetStaff();
-        $other = User::factory()->admin()->create();
+        $other = User::factory()->counterAgent()->create();
         User::factory()->finance()->create();
+        $admin = User::factory()->admin()->create();
         $vehicle = Vehicle::factory()->available()->create();
 
         $this->actingAs($manager)
@@ -118,7 +119,9 @@ class FleetManagementTest extends TestCase
         $this->assertSame(VehicleStatus::OutOfService, $vehicle->fresh()->status);
         $this->assertDatabaseHas('notifications', ['user_id' => $manager->id]);
         $this->assertDatabaseHas('notifications', ['user_id' => $other->id]);
-        // Accountants are not part of the fleet team.
+        // Accountants are not part of the fleet team, and the administrator
+        // runs the system, not fleet operations (design doc §2).
+        $this->assertDatabaseMissing('notifications', ['user_id' => $admin->id]);
         $this->assertSame(2, Notification::query()->count());
     }
 
