@@ -712,13 +712,65 @@ class OnlinePaymentTest extends TestCase
         $this->assertEqualsWithDelta(0.0, $rental->fresh()->balanceDue(), 0.01);
     }
 
-    public function test_a_transaction_the_gateway_cannot_read_is_asked_to_redeliver(): void
+    public function test_a_success_callback_settles_even_when_the_status_endpoint_cannot_read(): void
     {
         $rental = $this->rentalOwing(200000);
         $intent = $this->openPush($rental);
         $this->fakeVerifyDown();
 
+        // The status endpoint is not a dependable witness — the sandbox answers
+        // "pending" to every lookup, even nonsense — so an unambiguous success
+        // callback carries the evidence and capture still tests every invariant.
         $this->webhook($intent)
+            ->assertOk()
+            ->assertJson(['status' => GatewayCaptureOutcome::Recorded->value]);
+
+        $payment = Payment::query()->sole();
+        $this->assertSame(PaymentStatus::Paid, $payment->status);
+        $this->assertEqualsWithDelta(0.0, $rental->fresh()->balanceDue(), 0.01);
+        $this->assertDatabaseHas('payment_intents', ['id' => $intent->id, 'status' => PaymentIntentStatus::Recorded->value]);
+    }
+
+    public function test_the_real_sandbox_callback_shape_settles_the_payment(): void
+    {
+        $rental = $this->rentalOwing(200000);
+        $intent = $this->openPush($rental, 'halopesa');
+        $this->fakeVerifyDown();
+
+        // Field-for-field copy of what sandbox.azampay.co.tz actually delivered:
+        // lowercase transactionstatus, SUCCESS message, no currency key.
+        $this->webhookFallback([
+            'user' => null,
+            'amount' => '200000.00',
+            'msisdn' => '255722345678',
+            'message' => 'SUCCESS',
+            'transid' => '40f2cb38bf83459683ba2c7a3848b0af',
+            'clientId' => null,
+            'operator' => 'Halopesa',
+            'password' => null,
+            'reference' => '40f2cb38bf83459683ba2c7a3848b0af',
+            'utilityref' => $intent->tx_ref,
+            'mnoreference' => '0d780c2e-43b9-4696-ab8c-f84bd5227e68',
+            'submerchantAcc' => null,
+            'externalreference' => '40f2cb38bf83459683ba2c7a3848b0af',
+            'transactionstatus' => 'success',
+            'additionalProperties' => [],
+        ])
+            ->assertOk()
+            ->assertJson(['status' => GatewayCaptureOutcome::Recorded->value]);
+
+        $payment = Payment::query()->sole();
+        $this->assertEqualsWithDelta(200000.0, (float) $payment->amount, 0.01);
+        $this->assertEqualsWithDelta(0.0, $rental->fresh()->balanceDue(), 0.01);
+    }
+
+    public function test_a_callback_without_a_success_signal_is_asked_to_redeliver(): void
+    {
+        $rental = $this->rentalOwing(200000);
+        $intent = $this->openPush($rental);
+        $this->fakeVerifyDown();
+
+        $this->webhook($intent, payload: ['transactionStatus' => 'request_sent'])
             ->assertStatus(503)
             ->assertJson(['status' => 'retry']);
 

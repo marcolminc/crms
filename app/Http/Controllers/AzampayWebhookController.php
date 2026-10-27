@@ -76,7 +76,9 @@ final class AzampayWebhookController extends Controller
         }
 
         try {
-            $outcome = $checkout->settleFromWebhook($txRef, is_string($reference) ? $reference : '');
+            // The verbatim payload travels along as corroboration: when the status
+            // endpoint cannot bear witness, an unambiguous success callback settles.
+            $outcome = $checkout->settleFromWebhook($txRef, is_string($reference) ? $reference : '', $request->all());
         } catch (Throwable $exception) {
             // A bug on our side must not make AzamPay redeliver forever.
             Log::error('AzamPay webhook could not be processed.', ['error' => $exception->getMessage()]);

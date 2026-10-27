@@ -291,6 +291,47 @@ final class AzampayClient
     }
 
     /**
+     * Turns a success callback into a transaction result. The status endpoint is
+     * not always a usable witness — the sandbox answers "pending" to every lookup,
+     * including nonsense — so the callback itself carries the evidence when it
+     * unambiguously reports success. Capture still re-checks every invariant
+     * (reference, amount, currency, balance) against our own records.
+     *
+     * @param  array<string, mixed>  $payload
+     */
+    public function transactionFromCallback(array $payload): ?GatewayTransactionResult
+    {
+        // AzamPay's samples disagree on the status key's casing; message is the
+        // payer-side outcome and arrives as "SUCCESS".
+        $status = strtolower((string) ($payload['transactionStatus'] ?? $payload['transactionstatus'] ?? ''));
+        $message = strtoupper(trim((string) ($payload['message'] ?? '')));
+
+        if (! in_array($status, ['success', 'successful', 'completed'], true) && $message !== 'SUCCESS') {
+            return null;
+        }
+
+        $txRef = (string) ($payload['utilityref'] ?? '');
+
+        if ($txRef === '') {
+            return null;
+        }
+
+        $transactionId = (string) ($payload['externalreference'] ?? $payload['transid'] ?? $payload['reference'] ?? '');
+
+        return new GatewayTransactionResult(
+            transactionId: $transactionId !== '' ? $transactionId : $txRef,
+            txRef: $txRef,
+            gatewayRef: isset($payload['mnoreference']) && is_string($payload['mnoreference']) && $payload['mnoreference'] !== ''
+                ? $payload['mnoreference']
+                : null,
+            successful: true,
+            amount: (float) ($payload['amount'] ?? 0),
+            currency: (string) ($payload['currency'] ?? config('services.azampay.currency', 'TZS')),
+            gatewayStatus: $status !== '' ? $status : 'success',
+        );
+    }
+
+    /**
      * AzamPay hands out bearer tokens that expire; the token is cached with its own
      * budget, a minute short of the stated expiry so calls never race the cutoff.
      */

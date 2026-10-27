@@ -11,6 +11,7 @@ use App\Models\PaymentIntent;
 use App\Models\Rental;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
 /**
@@ -128,7 +129,7 @@ final class OnlinePaymentService
         return $this->settle($intent, $reference);
     }
 
-    public function settleFromWebhook(string $txRef, string $reference = ''): GatewayCaptureOutcome
+    public function settleFromWebhook(string $txRef, string $reference = '', array $callback = []): GatewayCaptureOutcome
     {
         $intent = PaymentIntent::findByTxRef($txRef);
 
@@ -136,7 +137,7 @@ final class OnlinePaymentService
             return GatewayCaptureOutcome::UnknownIntent;
         }
 
-        return $this->settle($intent, $reference);
+        return $this->settle($intent, $reference, $callback);
     }
 
     public function abandon(PaymentIntent $intent): void
@@ -241,7 +242,7 @@ final class OnlinePaymentService
         return GatewayCaptureOutcome::Recorded;
     }
 
-    private function settle(PaymentIntent $intent, string $reference): GatewayCaptureOutcome
+    private function settle(PaymentIntent $intent, string $reference, array $callback = []): GatewayCaptureOutcome
     {
         if (! $this->enabled()) {
             return GatewayCaptureOutcome::GatewayUnavailable;
@@ -252,6 +253,17 @@ final class OnlinePaymentService
         $lookup = $reference !== '' ? $reference : (string) ($intent->gateway_tx_id ?? $intent->tx_ref);
 
         $result = $this->gateway->verifyTransaction($lookup);
+
+        if ($result === null && $callback !== []) {
+            // Verification could not bear witness. A callback that unambiguously
+            // reports success carries the evidence instead; capture still tests
+            // every invariant against our own records before anything is booked.
+            $result = $this->gateway->transactionFromCallback($callback);
+
+            if ($result !== null) {
+                Log::info('AzamPay payment captured on callback evidence.', ['tx_ref' => $intent->tx_ref]);
+            }
+        }
 
         if ($result === null) {
             return GatewayCaptureOutcome::GatewayUnavailable;
