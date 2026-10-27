@@ -82,7 +82,7 @@
                 @if ($user !== null && ! empty($groups))
                     <div class="relative" data-menu-root>
                         <button type="button" data-menu-toggle aria-haspopup="true"
-                                class="flex items-center gap-2 rounded-lg bg-slate-900 px-3 py-2 text-sm font-medium text-white hover:bg-slate-700">
+                                class="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-700 hover:border-emerald-300 hover:bg-emerald-50/50 hover:text-slate-900">
                             <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5"/>
                             </svg>
@@ -118,8 +118,13 @@
                 <a href="{{ $user?->isStaff() ? route('admin.dashboard') : ($user?->isDriver() ? route('notifications.index') : route('customer.dashboard')) }}"
                    class="flex items-center gap-2.5">
                     <img src="{{ asset('logo.png') }}" alt="{{ config('app.name') }} logo"
-                         class="h-11 w-auto sm:h-12">
+                         class="h-14 w-auto sm:h-16">
                 </a>
+            </div>
+
+            {{-- Company name, centred between the brand block and the right-hand controls --}}
+            <div class="hidden min-w-0 flex-1 items-center justify-center md:flex">
+                <span class="truncate text-lg font-bold tracking-tight text-slate-900">Land Valley&rsquo;s Travels</span>
             </div>
 
             <div class="flex items-center gap-2.5 sm:gap-3">
@@ -199,10 +204,10 @@
 
     <main class="mx-auto max-w-7xl px-4 py-8 sm:px-6">
         @if (session('status'))
-            <x-alert type="success">{{ session('status') }}</x-alert>
+            <x-alert type="success" :auto-dismiss="true">{{ session('status') }}</x-alert>
         @endif
         @if (session('error'))
-            <x-alert type="error">{{ session('error') }}</x-alert>
+            <x-alert type="error" :auto-dismiss="true">{{ session('error') }}</x-alert>
         @endif
         @if ($errors->any())
             <x-alert type="error">
