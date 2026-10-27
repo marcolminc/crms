@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>@yield('title', 'Dashboard') &middot; {{ config('app.name') }}</title>
-    <link rel="icon" type="image/jpeg" href="{{ asset('logo.jpeg') }}">
+    <link rel="icon" type="image/png" href="{{ asset('logo.png') }}">
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 <body class="h-full bg-slate-100 text-slate-900 antialiased">
@@ -117,12 +117,8 @@
                 @endif
                 <a href="{{ $user?->isStaff() ? route('admin.dashboard') : ($user?->isDriver() ? route('notifications.index') : route('customer.dashboard')) }}"
                    class="flex items-center gap-2.5">
-                    <img src="{{ asset('logo.jpeg') }}" alt="{{ config('app.name') }} logo"
-                         class="h-10 w-10 rounded-full border border-slate-200 object-cover sm:h-11 sm:w-11">
-                    <span class="hidden leading-tight sm:block">
-                        <span class="block text-sm font-bold tracking-tight text-slate-900">Land Valley&rsquo;s Travels</span>
-                        <span class="block text-[11px] font-medium uppercase tracking-widest text-emerald-700">Mwanza &middot; Car Rental</span>
-                    </span>
+                    <img src="{{ asset('logo.png') }}" alt="{{ config('app.name') }} logo"
+                         class="h-11 w-auto sm:h-12">
                 </a>
             </div>
 

@@ -4,19 +4,15 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>@yield('title') &middot; {{ config('app.name') }}</title>
-    <link rel="icon" type="image/jpeg" href="{{ asset('logo.jpeg') }}">
+    <link rel="icon" type="image/png" href="{{ asset('logo.png') }}">
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 <body class="h-full bg-slate-50 text-slate-900 antialiased">
 <div class="min-h-full">
     <header class="sticky top-0 z-40 border-b border-slate-200 bg-white/95 shadow-sm backdrop-blur">
         <div class="mx-auto flex max-w-5xl items-center justify-between px-4 py-3 sm:px-6">
-            <a href="{{ route('home') }}" class="flex items-center gap-2.5">
-                <img src="{{ asset('logo.jpeg') }}" alt="{{ config('app.name') }} logo" class="h-11 w-11 rounded-full border border-slate-200 object-cover">
-                <span class="leading-tight">
-                    <span class="block text-sm font-bold tracking-tight text-slate-900">Land Valley&rsquo;s Travels</span>
-                    <span class="block text-[11px] font-medium uppercase tracking-widest text-emerald-700">Mwanza &middot; Car Rental</span>
-                </span>
+            <a href="{{ route('home') }}" class="flex items-center">
+                <img src="{{ asset('logo.png') }}" alt="{{ config('app.name') }} logo" class="h-12 w-auto sm:h-14">
             </a>
             <div class="flex items-center gap-3 text-sm">
                 <a href="{{ route('vehicles.index') }}" class="rounded-lg px-3 py-2 font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900">Browse vehicles</a>
