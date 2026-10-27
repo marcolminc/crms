@@ -23,7 +23,7 @@ final class UpdateUserRequest extends FormRequest
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'email', 'max:255', Rule::unique('users', 'email')->ignore($target->id)],
             'phone' => ['nullable', 'string', 'max:20'],
-            'role' => ['required', Rule::in(array_keys(UserRole::options()))],
+            'role' => ['required', Rule::enum(UserRole::class)],
             'password' => ['nullable', 'string', 'confirmed', 'min:8'],
             'is_active' => ['nullable', 'boolean'],
         ];
@@ -31,7 +31,7 @@ final class UpdateUserRequest extends FormRequest
         if ($target->is($this->user())) {
             $rules['role'] = [
                 'required',
-                Rule::in(array_keys(UserRole::options())),
+                Rule::enum(UserRole::class),
                 function (string $attribute, mixed $value, \Closure $fail) use ($target): void {
                     if ($value !== $target->role?->value) {
                         $fail('You cannot change your own role.');

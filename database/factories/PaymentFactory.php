@@ -35,7 +35,7 @@ class PaymentFactory extends Factory
             'status' => PaymentStatus::Pending,
             // transaction_reference is only meaningful for mobile money.
             'transaction_reference' => null,
-            'recorded_by' => User::factory()->rentalStaff(),
+            'recorded_by' => User::factory()->counterAgent(),
             'paid_at' => null,
             'notes' => null,
         ];

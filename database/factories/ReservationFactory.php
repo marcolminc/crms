@@ -58,7 +58,7 @@ class ReservationFactory extends Factory
     {
         return $this->state(fn (array $attributes) => [
             'status' => ReservationStatus::Confirmed,
-            'confirmed_by' => User::factory()->rentalStaff(),
+            'confirmed_by' => User::factory()->counterAgent(),
             'confirmed_at' => now(),
         ]);
     }
@@ -82,7 +82,7 @@ class ReservationFactory extends Factory
     {
         return $this->state(fn (array $attributes) => [
             'status' => ReservationStatus::Completed,
-            'confirmed_by' => User::factory()->rentalStaff(),
+            'confirmed_by' => User::factory()->counterAgent(),
             'confirmed_at' => now(),
         ]);
     }

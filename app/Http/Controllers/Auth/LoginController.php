@@ -52,9 +52,20 @@ final class LoginController extends Controller
         RateLimiter::clear($key);
         $request->session()->regenerate();
 
-        return redirect()->intended(
-            $user->isStaff() ? route('admin.dashboard') : route('customer.dashboard')
-        );
+        // Land each actor where its work lives (design doc §2).
+        $landing = match (true) {
+            $user->isStaff() => route('admin.dashboard'),
+            $user->isDriver() => route('notifications.index'),
+            default => route('customer.dashboard'),
+        };
+
+        $redirect = redirect()->intended($landing);
+
+        if ($user->isDriver()) {
+            $redirect = $redirect->with('status', 'Welcome back. The driver trip-log portal (UC24) is under construction; alerts and your profile are available meanwhile.');
+        }
+
+        return $redirect;
     }
 
     public function destroy(Request $request)

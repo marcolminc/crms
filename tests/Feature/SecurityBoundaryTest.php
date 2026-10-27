@@ -19,7 +19,7 @@ class SecurityBoundaryTest extends TestCase
 
     private function staff(): User
     {
-        return User::factory()->rentalStaff()->create();
+        return User::factory()->counterAgent()->create();
     }
 
     public function test_customer_names_are_escaped_wherever_they_are_rendered(): void

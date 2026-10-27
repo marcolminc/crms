@@ -27,7 +27,7 @@ class RentalFactory extends Factory
             'reservation_id' => null,
             'customer_id' => Customer::factory(),
             'vehicle_id' => Vehicle::factory(),
-            'staff_id' => User::factory()->rentalStaff(),
+            'staff_id' => User::factory()->counterAgent(),
             'start_date' => $start->format('Y-m-d'),
             'end_date' => $end->format('Y-m-d'),
             // days / subtotal / total_amount are derived in configure().

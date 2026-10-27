@@ -67,7 +67,7 @@ class PaymentRecordingServiceTest extends TestCase
 
     public function test_a_recorded_draft_becomes_a_ledger_row_with_the_derived_status(): void
     {
-        $staff = User::factory()->rentalStaff()->create();
+        $staff = User::factory()->counterAgent()->create();
         $rental = $this->rentalOwing(200000);
 
         $payment = $this->ledger->record($rental, new PaymentDraft(

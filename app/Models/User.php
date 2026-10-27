@@ -45,9 +45,24 @@ class User extends Authenticatable
         return $this->hasMany(Notification::class)->latest();
     }
 
+    /**
+     * Back-office staff (design doc §2 actors who administer the system).
+     * Customers and Drivers are not staff; the Driver actor works through
+     * the trip-log portal (UC24), not the admin screens.
+     */
     public function isStaff(): bool
     {
-        return $this->role !== null && $this->role !== UserRole::Customer;
+        return $this->role !== null && in_array($this->role, UserRole::staff(), true);
+    }
+
+    public function isDriver(): bool
+    {
+        return $this->role === UserRole::Driver;
+    }
+
+    public function isCustomer(): bool
+    {
+        return $this->role === UserRole::Customer;
     }
 
     public function hasRole(UserRole ...$roles): bool

@@ -57,7 +57,7 @@ class ProfileTest extends TestCase
 
     public function test_staff_profiles_never_gain_a_customer_record(): void
     {
-        $staff = User::factory()->rentalStaff()->create();
+        $staff = User::factory()->counterAgent()->create();
 
         $this->actingAs($staff)
             ->put('/profile', [

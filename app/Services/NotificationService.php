@@ -26,7 +26,7 @@ class NotificationService
     public function fleetTeam(): array
     {
         return User::query()
-            ->whereIn('role', [UserRole::Admin, UserRole::FleetManager, UserRole::RentalStaff])
+            ->whereIn('role', [UserRole::Admin, UserRole::FleetStaff, UserRole::CounterAgent])
             ->where('is_active', true)
             ->pluck('id')
             ->all();

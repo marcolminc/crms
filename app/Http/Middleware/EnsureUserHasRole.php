@@ -17,8 +17,14 @@ class EnsureUserHasRole
         abort_if(! $user->is_active, Response::HTTP_FORBIDDEN, 'Your account has been deactivated.');
 
         if ($roles !== []) {
-            $allowed = array_filter($roles, fn (string $role) => UserRole::tryFrom($role) !== null);
-            abort_unless($user->hasRole(...array_map(fn (string $r) => UserRole::from($r), $allowed)), Response::HTTP_FORBIDDEN);
+            // Strict: a route may only guard against real UserRole cases. A
+            // typo'd role name here is a developer bug, so surface it loudly
+            // rather than silently dropping it (which could widen access).
+            $allowed = array_map(
+                fn (string $role) => UserRole::from($role),
+                $roles,
+            );
+            abort_unless($user->hasRole(...$allowed), Response::HTTP_FORBIDDEN);
         }
 
         return $next($request);

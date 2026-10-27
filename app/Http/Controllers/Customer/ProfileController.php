@@ -24,7 +24,7 @@ final class ProfileController extends Controller
 
         $user->update(Arr::only($data, ['name', 'email', 'phone']));
 
-        if (! $user->isStaff()) {
+        if ($user->isCustomer()) {
             $customer = $user->customer ?? $user->customer()->create([]);
             $customer->update(Arr::except($data, ['name', 'email', 'phone']));
         }

@@ -76,7 +76,7 @@ class VehicleBrowseTest extends TestCase
     {
         $vehicle = Vehicle::factory()->available()->create();
         $customer = User::factory()->customer()->create();
-        $staff = User::factory()->rentalStaff()->create();
+        $staff = User::factory()->counterAgent()->create();
 
         $this->get(route('vehicles.show', $vehicle))->assertOk()->assertDontSee('Continue to booking', false);
 

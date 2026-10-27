@@ -64,7 +64,7 @@ final class VehicleBrowseController extends Controller
         $isFree = $hasWindow ? $vehicle->isFreeBetween($from, $to) : null;
 
         $user = $request->user();
-        $canBook = $user !== null && ! $user->isStaff();
+        $canBook = $user !== null && $user->isCustomer();
 
         return view('vehicles.show', [
             'vehicle' => $vehicle,

@@ -17,9 +17,9 @@ class ReportingTest extends TestCase
 {
     use LazilyRefreshDatabase;
 
-    private function manager(): User
+    private function branchManager(): User
     {
-        return User::factory()->manager()->create();
+        return User::factory()->branchManager()->create();
     }
 
     public function test_the_admin_dashboard_summarises_fleet_and_trade(): void
@@ -34,7 +34,7 @@ class ReportingTest extends TestCase
             'days' => 4,
         ]);
 
-        $this->actingAs($this->manager())
+        $this->actingAs($this->branchManager())
             ->get('/admin')
             ->assertOk()
             ->assertSee('Fleet by status')
@@ -43,7 +43,7 @@ class ReportingTest extends TestCase
 
     public function test_every_report_renders_and_rejects_unknown_keys(): void
     {
-        $manager = $this->manager();
+        $manager = $this->branchManager();
 
         $rental = Rental::factory()->completed()->create([
             'start_date' => now()->toDateString(),
@@ -85,7 +85,7 @@ class ReportingTest extends TestCase
     {
         Vehicle::factory()->available()->create(['plate_number' => 'T777 CSV']);
 
-        $response = $this->actingAs($this->manager())
+        $response = $this->actingAs($this->branchManager())
             ->get(route('admin.reports.show', 'fleet').'?format=csv');
 
         $response->assertOk()
@@ -112,7 +112,7 @@ class ReportingTest extends TestCase
         ]);
         $recent->forceFill(['total_amount' => 100000])->save();
 
-        $this->actingAs($this->manager())
+        $this->actingAs($this->branchManager())
             ->get(route('admin.reports.show', 'rentals'))
             ->assertOk()
             ->assertSee('100,000')
@@ -124,7 +124,7 @@ class ReportingTest extends TestCase
         $user = User::factory()->customer()->create(['name' => 'Amina Juma']);
         Customer::factory()->create(['user_id' => $user->id]);
 
-        $this->actingAs($this->manager())
+        $this->actingAs($this->branchManager())
             ->get(route('admin.reports.show', 'customers'))
             ->assertOk()
             ->assertSee('Amina Juma');
@@ -132,7 +132,7 @@ class ReportingTest extends TestCase
 
     public function test_staff_can_review_a_customers_full_rental_history(): void
     {
-        $manager = $this->manager();
+        $manager = $this->branchManager();
         $customer = Customer::factory()->create(['user_id' => User::factory()->customer()->create(['name' => 'Joseph Mwakalinga'])->id]);
         Rental::factory()->completed()->create([
             'customer_id' => $customer->id,

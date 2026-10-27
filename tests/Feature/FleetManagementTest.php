@@ -17,9 +17,9 @@ class FleetManagementTest extends TestCase
 {
     use LazilyRefreshDatabase;
 
-    private function fleetManager(): User
+    private function fleetStaff(): User
     {
-        return User::factory()->fleetManager()->create();
+        return User::factory()->fleetStaff()->create();
     }
 
     private function validVehiclePayload(array $overrides = []): array
@@ -43,7 +43,7 @@ class FleetManagementTest extends TestCase
 
     public function test_a_new_vehicle_lands_in_the_fleet_with_parsed_features(): void
     {
-        $this->actingAs($this->fleetManager())
+        $this->actingAs($this->fleetStaff())
             ->post('/admin/vehicles', $this->validVehiclePayload())
             ->assertSessionHas('status');
 
@@ -55,7 +55,7 @@ class FleetManagementTest extends TestCase
 
     public function test_duplicate_plate_numbers_are_refused(): void
     {
-        $manager = $this->fleetManager();
+        $manager = $this->fleetStaff();
         Vehicle::factory()->create(['plate_number' => 'T123 ABC']);
 
         $this->actingAs($manager)
@@ -69,7 +69,7 @@ class FleetManagementTest extends TestCase
     {
         $vehicle = Vehicle::factory()->available()->create();
 
-        $this->actingAs($this->fleetManager())
+        $this->actingAs($this->fleetStaff())
             ->put(route('admin.vehicles.status', $vehicle), ['status' => VehicleStatus::Rented->value])
             ->assertSessionHasErrors('status');
 
@@ -81,7 +81,7 @@ class FleetManagementTest extends TestCase
         $rental = Rental::factory()->active()->create();
         $vehicle = $rental->vehicle;
 
-        $this->actingAs($this->fleetManager())
+        $this->actingAs($this->fleetStaff())
             ->put(route('admin.vehicles.status', $vehicle), ['status' => VehicleStatus::OutOfService->value])
             ->assertSessionHas('error');
 
@@ -97,7 +97,7 @@ class FleetManagementTest extends TestCase
             'end_date' => null,
         ]);
 
-        $this->actingAs($this->fleetManager())
+        $this->actingAs($this->fleetStaff())
             ->put(route('admin.vehicles.status', $vehicle), ['status' => VehicleStatus::Available->value])
             ->assertSessionHas('error');
 
@@ -106,9 +106,9 @@ class FleetManagementTest extends TestCase
 
     public function test_taking_a_vehicle_out_of_service_alerts_the_fleet_team(): void
     {
-        $manager = $this->fleetManager();
+        $manager = $this->fleetStaff();
         $other = User::factory()->admin()->create();
-        User::factory()->accountant()->create();
+        User::factory()->finance()->create();
         $vehicle = Vehicle::factory()->available()->create();
 
         $this->actingAs($manager)
@@ -124,7 +124,7 @@ class FleetManagementTest extends TestCase
 
     public function test_logging_maintenance_takes_the_vehicle_off_the_shelf(): void
     {
-        $manager = $this->fleetManager();
+        $manager = $this->fleetStaff();
         $vehicle = Vehicle::factory()->available()->create();
 
         $this->actingAs($manager)->post('/admin/maintenances', [
@@ -140,7 +140,7 @@ class FleetManagementTest extends TestCase
 
     public function test_completing_the_last_maintenance_job_returns_the_vehicle_to_service(): void
     {
-        $manager = $this->fleetManager();
+        $manager = $this->fleetStaff();
         $vehicle = Vehicle::factory()->underMaintenance()->create();
         $maintenance = Maintenance::factory()->create([
             'vehicle_id' => $vehicle->id,
@@ -165,7 +165,7 @@ class FleetManagementTest extends TestCase
 
     public function test_a_vehicle_holding_a_booking_is_kept_from_deletion(): void
     {
-        $manager = $this->fleetManager();
+        $manager = $this->fleetStaff();
         $vehicle = Vehicle::factory()->available()->create();
         Reservation::factory()->pending()->create(['vehicle_id' => $vehicle->id]);
 
@@ -185,7 +185,7 @@ class FleetManagementTest extends TestCase
 
     public function test_deleting_work_in_progress_is_refused(): void
     {
-        $manager = $this->fleetManager();
+        $manager = $this->fleetStaff();
         $vehicle = Vehicle::factory()->available()->create();
         $maintenance = Maintenance::factory()->create([
             'vehicle_id' => $vehicle->id,

@@ -18,7 +18,7 @@ class StaffReservationWorkflowTest extends TestCase
 
     private function staff(): User
     {
-        return User::factory()->rentalStaff()->create();
+        return User::factory()->counterAgent()->create();
     }
 
     private function reservation(string $status = 'pending', array $attributes = []): Reservation

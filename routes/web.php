@@ -54,9 +54,6 @@ Route::middleware(['auth', 'role:customer'])->group(function () {
     Route::get('payments/{payment_intent}/status', [CustomerPayment::class, 'status'])->name('customer.payments.status');
     Route::post('payments/{payment_intent}/confirm', [CustomerPayment::class, 'confirm'])->name('customer.payments.confirm');
     Route::get('payments/{payment_intent}/return', [CustomerPayment::class, 'complete'])->name('customer.payments.return');
-
-    Route::get('notifications', [NotificationController::class, 'index'])->name('notifications.index');
-    Route::put('notifications/{notification}/read', [NotificationController::class, 'markAsRead'])->name('notifications.read');
 });
 
 /*
@@ -75,6 +72,10 @@ Route::middleware('auth')->group(function () {
     Route::get('profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::put('profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::put('profile/password', [PasswordController::class, 'update'])->name('profile.password.update');
+
+    // UC12: every actor (customers, staff and drivers) receives notifications.
+    Route::get('notifications', [NotificationController::class, 'index'])->name('notifications.index');
+    Route::put('notifications/{notification}/read', [NotificationController::class, 'markAsRead'])->name('notifications.read');
 });
 
 /*

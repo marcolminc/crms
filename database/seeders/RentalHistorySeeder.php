@@ -76,7 +76,7 @@ class RentalHistorySeeder extends Seeder
             'fleet' => 'fleet@landvalley.co.tz',
             'staff' => 'staff@landvalley.co.tz',
             'accounts' => 'accounts@landvalley.co.tz',
-            'manager' => 'manager@landvalley.co.tz',
+            'branchManager' => 'manager@landvalley.co.tz',
         ];
         foreach ($emails as $key => $email) {
             $this->staff[$key] = User::where('email', $email)->firstOrFail();
@@ -380,7 +380,7 @@ class RentalHistorySeeder extends Seeder
                 'estimated_total' => round((float) $vehicle->rate_per_day * $days, 2),
                 'status' => ReservationStatus::from($kind),
                 'rejection_reason' => $flag === 'rejected' ? 'Vehicle was already committed to a corporate booking for those dates.' : null,
-                'confirmed_by' => $flag === 'confirmed' ? $this->staff['manager']->id : null,
+                'confirmed_by' => $flag === 'confirmed' ? $this->staff['branchManager']->id : null,
                 'confirmed_at' => $flag === 'confirmed' ? Carbon::parse($start)->subDays(6)->format('Y-m-d H:i:s') : null,
             ]);
         }
@@ -454,7 +454,7 @@ class RentalHistorySeeder extends Seeder
                 $rental->vehicle->plate_number,
                 $rental->end_date->format('d M Y'),
             );
-            foreach (['admin', 'staff', 'manager'] as $key) {
+            foreach (['admin', 'staff', 'branchManager'] as $key) {
                 Notification::create([
                     'user_id' => $this->staff[$key]->id,
                     'title' => 'Overdue rental',

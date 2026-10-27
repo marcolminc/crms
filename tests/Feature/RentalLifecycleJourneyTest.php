@@ -85,7 +85,7 @@ class RentalLifecycleJourneyTest extends TestCase
         $this->assertEqualsWithDelta(600000.0, (float) $reservation->estimated_total, 0.01);
 
         // 4. Rental staff confirm the request; the vehicle leaves the shelf.
-        $staff = User::factory()->rentalStaff()->create();
+        $staff = User::factory()->counterAgent()->create();
         $this->actingAs($staff)
             ->get(route('admin.reservations.show', $reservation))
             ->assertOk()
@@ -170,7 +170,7 @@ class RentalLifecycleJourneyTest extends TestCase
             ->assertSee('Rental completed');
 
         // 10. Management closes the month with the reports.
-        $manager = User::factory()->manager()->create();
+        $manager = User::factory()->branchManager()->create();
         foreach (['fleet', 'rentals', 'payments', 'returns'] as $report) {
             $this->actingAs($manager)
                 ->get(route('admin.reports.show', $report))

@@ -5,7 +5,7 @@
 @section('content')
     <x-page-header title="Our fleet" description="Browse available vehicles at Land Valley's Travels, Mwanza.">
         <x-slot:actions>
-            @if (auth()->check() && ! auth()->user()->isStaff())
+            @if (auth()->check() && auth()->user()->isCustomer())
                 <a href="{{ route('customer.reservations.create') }}"
                    class="rounded-md bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-500">
                     Book a vehicle

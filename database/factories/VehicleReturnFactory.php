@@ -28,7 +28,7 @@ class VehicleReturnFactory extends Factory
             'mileage_at_return' => fake()->numberBetween(30000, 200000),
             'damage_notes' => null,
             'additional_charges' => 0,
-            'processed_by' => User::factory()->rentalStaff(),
+            'processed_by' => User::factory()->counterAgent(),
         ];
     }
 

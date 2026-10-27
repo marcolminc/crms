@@ -13,6 +13,10 @@ final class UserController extends Controller
 {
     public function index(Request $request)
     {
+        // The role filter is attacker-editable; only honour it when it matches
+        // a real UserRole, otherwise ignore it rather than querying a stray value.
+        $roleFilter = UserRole::tryFrom((string) $request->input('role'));
+
         $users = User::query()
             ->when($request->filled('q'), function ($q) use ($request) {
                 $term = '%'.$request->input('q').'%';
@@ -20,7 +24,7 @@ final class UserController extends Controller
                     $inner->where('name', 'like', $term)->orWhere('email', 'like', $term);
                 });
             })
-            ->when($request->filled('role'), fn ($q) => $q->where('role', $request->input('role')))
+            ->when($roleFilter !== null, fn ($q) => $q->where('role', $roleFilter))
             ->orderBy('name')
             ->paginate(15)
             ->withQueryString();

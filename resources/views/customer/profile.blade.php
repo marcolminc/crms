@@ -19,7 +19,7 @@
                 </fieldset>
             </x-card>
 
-            @if (! $user->isStaff())
+            @if ($user->isCustomer())
             <x-card title="Rental details">
                 <fieldset class="space-y-0">
                     <legend class="sr-only">Rental details</legend>

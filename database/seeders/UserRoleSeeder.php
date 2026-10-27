@@ -16,10 +16,11 @@ class UserRoleSeeder extends Seeder
     {
         $staff = [
             ['admin@landvalley.co.tz', 'Neema Shirima', UserRole::Admin, '0788 000 001'],
-            ['fleet@landvalley.co.tz', 'Daudi Mkwawa', UserRole::FleetManager, '0788 000 002'],
-            ['staff@landvalley.co.tz', 'Rehema Bakari', UserRole::RentalStaff, '0788 000 003'],
-            ['accounts@landvalley.co.tz', 'Simon Mbilila', UserRole::Accountant, '0788 000 004'],
-            ['manager@landvalley.co.tz', 'Grace Ulimwengu', UserRole::Manager, '0788 000 005'],
+            ['fleet@landvalley.co.tz', 'Daudi Mkwawa', UserRole::FleetStaff, '0788 000 002'],
+            ['staff@landvalley.co.tz', 'Rehema Bakari', UserRole::CounterAgent, '0788 000 003'],
+            ['accounts@landvalley.co.tz', 'Simon Mbilila', UserRole::Finance, '0788 000 004'],
+            ['manager@landvalley.co.tz', 'Grace Ulimwengu', UserRole::BranchManager, '0788 000 005'],
+            ['driver@landvalley.co.tz', 'Juma Mkwava', UserRole::Driver, '0788 000 006'],
         ];
 
         foreach ($staff as [$email, $name, $role, $phone]) {

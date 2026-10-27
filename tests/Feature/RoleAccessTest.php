@@ -36,7 +36,7 @@ class RoleAccessTest extends TestCase
 
     public function test_staff_cannot_reach_the_customer_area(): void
     {
-        $staff = User::factory()->rentalStaff()->create();
+        $staff = User::factory()->counterAgent()->create();
 
         $this->actingAs($staff)->get('/dashboard')->assertForbidden();
         $this->actingAs($staff)->get('/reservations')->assertForbidden();
@@ -49,10 +49,10 @@ class RoleAccessTest extends TestCase
     {
         return [
             'system administrator' => ['admin'],
-            'fleet manager' => ['fleetManager'],
-            'rental staff' => ['rentalStaff'],
-            'accountant' => ['accountant'],
-            'branch manager' => ['manager'],
+            'fleet manager' => ['fleetStaff'],
+            'rental staff' => ['counterAgent'],
+            'finance' => ['finance'],
+            'branch manager' => ['branchManager'],
         ];
     }
 
@@ -70,10 +70,10 @@ class RoleAccessTest extends TestCase
     public static function rolesThatDoNotManageAccounts(): array
     {
         return [
-            'rental staff' => ['rentalStaff'],
-            'fleet manager' => ['fleetManager'],
-            'accountant' => ['accountant'],
-            'branch manager' => ['manager'],
+            'rental staff' => ['counterAgent'],
+            'fleet manager' => ['fleetStaff'],
+            'finance' => ['finance'],
+            'branch manager' => ['branchManager'],
             'customer' => ['customer'],
         ];
     }
@@ -95,11 +95,55 @@ class RoleAccessTest extends TestCase
 
     public function test_deactivated_users_are_locked_out_everywhere(): void
     {
-        $staff = User::factory()->rentalStaff()->create(['is_active' => false]);
+        $staff = User::factory()->counterAgent()->create(['is_active' => false]);
         $customer = User::factory()->customer()->create(['is_active' => false]);
 
         $this->actingAs($staff)->get('/admin')->assertForbidden();
         $this->actingAs($customer)->get('/dashboard')->assertForbidden();
+    }
+
+    public function test_drivers_are_locked_out_of_the_admin_and_customer_areas(): void
+    {
+        // The trip-log portal (UC24) is not built, so a Driver has no
+        // business in either existing area.
+        $driver = User::factory()->driver()->create();
+
+        $this->actingAs($driver)->get('/admin')->assertForbidden();
+        $this->actingAs($driver)->get('/admin/vehicles')->assertForbidden();
+        $this->actingAs($driver)->get('/dashboard')->assertForbidden();
+        $this->actingAs($driver)->get('/reservations/create')->assertForbidden();
+    }
+
+    public function test_drivers_reach_account_tools_available_to_every_actor(): void
+    {
+        $driver = User::factory()->driver()->create();
+
+        $this->actingAs($driver)->get('/notifications')->assertOk();
+        $this->actingAs($driver)->get('/profile')->assertOk();
+    }
+
+    public function test_login_lands_a_driver_on_their_alerts(): void
+    {
+        $driver = User::factory()->driver()->create(['password' => 'password']);
+
+        $this->post('/login', ['email' => $driver->email, 'password' => 'password'])
+            ->assertRedirect(route('notifications.index'));
+    }
+
+    public function test_login_still_lands_staff_on_the_admin_dashboard(): void
+    {
+        $agent = User::factory()->counterAgent()->create(['password' => 'password']);
+
+        $this->post('/login', ['email' => $agent->email, 'password' => 'password'])
+            ->assertRedirect(route('admin.dashboard'));
+    }
+
+    public function test_login_still_lands_customers_on_their_dashboard(): void
+    {
+        $customer = User::factory()->customer()->create(['password' => 'password']);
+
+        $this->post('/login', ['email' => $customer->email, 'password' => 'password'])
+            ->assertRedirect(route('customer.dashboard'));
     }
 
     /**

@@ -18,7 +18,7 @@ class ReturnFlowTest extends TestCase
 
     private function staff(): User
     {
-        return User::factory()->rentalStaff()->create();
+        return User::factory()->counterAgent()->create();
     }
 
     public function test_returning_a_vehicle_completes_the_rental_and_frees_it(): void

@@ -27,8 +27,8 @@ class CustomerReservationTest extends TestCase
         [$user, $customer] = $this->customerWithProfile();
         $vehicle = Vehicle::factory()->available()->create(['rate_per_day' => 120000]);
 
-        $staff = User::factory()->rentalStaff()->create();
-        User::factory()->rentalStaff()->create(['is_active' => false]);
+        $staff = User::factory()->counterAgent()->create();
+        User::factory()->counterAgent()->create(['is_active' => false]);
 
         $response = $this->actingAs($user)->post('/reservations', [
             'vehicle' => $vehicle->id,

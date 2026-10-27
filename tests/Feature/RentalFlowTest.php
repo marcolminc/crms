@@ -21,7 +21,7 @@ class RentalFlowTest extends TestCase
 
     private function staff(): User
     {
-        return User::factory()->rentalStaff()->create();
+        return User::factory()->counterAgent()->create();
     }
 
     private function customer(): Customer

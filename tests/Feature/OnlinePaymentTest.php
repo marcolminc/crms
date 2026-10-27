@@ -411,7 +411,7 @@ class OnlinePaymentTest extends TestCase
     {
         $this->configureGateway();
         $rental = $this->rentalOwing(200000);
-        $staff = User::factory()->rentalStaff()->create();
+        $staff = User::factory()->counterAgent()->create();
 
         $this->actingAs($staff)
             ->post(route('customer.rentals.pay', $rental), ['payment_method' => 'mpesa'])

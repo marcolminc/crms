@@ -76,7 +76,7 @@ class AuthenticationTest extends TestCase
 
     public function test_staff_are_redirected_to_the_admin_dashboard_on_login(): void
     {
-        User::factory()->rentalStaff()->create([
+        User::factory()->counterAgent()->create([
             'email' => 'staff@example.com',
             'password' => 'password123',
         ]);

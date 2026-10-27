@@ -52,31 +52,38 @@ class UserFactory extends Factory
         ]);
     }
 
-    public function fleetManager(): static
+    public function counterAgent(): static
     {
         return $this->state(fn (array $attributes) => [
-            'role' => UserRole::FleetManager,
+            'role' => UserRole::CounterAgent,
         ]);
     }
 
-    public function rentalStaff(): static
+    public function fleetStaff(): static
     {
         return $this->state(fn (array $attributes) => [
-            'role' => UserRole::RentalStaff,
+            'role' => UserRole::FleetStaff,
         ]);
     }
 
-    public function accountant(): static
+    public function finance(): static
     {
         return $this->state(fn (array $attributes) => [
-            'role' => UserRole::Accountant,
+            'role' => UserRole::Finance,
         ]);
     }
 
-    public function manager(): static
+    public function branchManager(): static
     {
         return $this->state(fn (array $attributes) => [
-            'role' => UserRole::Manager,
+            'role' => UserRole::BranchManager,
+        ]);
+    }
+
+    public function driver(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'role' => UserRole::Driver,
         ]);
     }
 }
