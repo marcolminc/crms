@@ -12,6 +12,8 @@
 @section('content')
     <x-page-header :title="'Rental #'.$rental->id" :description="$rental->customer?->display_name.' — '.($vehicle?->display_name ?? 'Removed vehicle')">
         <x-slot:actions>
+            <a href="{{ route('admin.rentals.invoice', $rental) }}"
+               class="rounded-md border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">Invoice</a>
             <a href="{{ route('admin.rentals.index') }}"
                class="rounded-md border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">Back to rentals</a>
         </x-slot:actions>
@@ -83,6 +85,12 @@
                     <div class="grid gap-2 text-sm sm:grid-cols-3">
                         <p class="text-slate-500">Chauffeur fee</p>
                         <p class="text-right text-slate-800">+{{ number_format($rental->driver_fee, 0) }} TZS</p>
+                    </div>
+                @endif
+                @if ((float) $rental->late_fee > 0)
+                    <div class="grid gap-2 text-sm sm:grid-cols-3">
+                        <p class="text-slate-500">Late return</p>
+                        <p class="text-right text-slate-800">+{{ number_format($rental->late_fee, 0) }} TZS</p>
                     </div>
                 @endif
                 <div class="grid gap-2 text-sm sm:grid-cols-3">

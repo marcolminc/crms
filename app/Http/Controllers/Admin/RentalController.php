@@ -32,6 +32,29 @@ final class RentalController extends Controller
 {
     public function __construct(private readonly NotificationService $notifications) {}
 
+    /**
+     * FR9: the settlement invoice. Derived from the rental, its payments and its
+     * fines; nothing here is stored separately, so the document always reflects
+     * the current money columns on the hire.
+     */
+    public function invoice(Rental $rental)
+    {
+        $rental->load([
+            'vehicle',
+            'customer.user',
+            'payments.recordedBy',
+            'fines',
+            'vehicleReturn',
+        ]);
+
+        return view('admin.rentals.invoice', [
+            'rental' => $rental,
+            'paid' => $rental->paidAmount(),
+            'balance' => $rental->balanceDue(),
+            'surplus' => max(0, $rental->paidAmount() - (float) $rental->total_amount),
+        ]);
+    }
+
     public function index(Request $request)
     {
         $base = Rental::query()

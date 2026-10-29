@@ -95,6 +95,8 @@ final class ApprovalController extends Controller
         if ($rental !== null) {
             if ($approval->type === ApprovalType::Discount) {
                 $rental->discount = 0;
+            } elseif ($approval->type === ApprovalType::Late) {
+                $rental->late_fee = max(0, (float) $rental->late_fee - (float) $approval->amount);
             } else {
                 $rental->additional_charges = max(0, (float) $rental->additional_charges - (float) $approval->amount);
             }

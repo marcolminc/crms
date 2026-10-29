@@ -56,10 +56,10 @@ final class ChargeApprovalService
         if ($managers !== []) {
             $this->notifications->forUsers(
                 $managers,
-                $type === ApprovalType::Discount ? 'Discount needs approval' : 'Damage charge needs approval',
+                $type === ApprovalType::Discount ? 'Discount needs approval' : $type->label().' needs approval',
                 $type === ApprovalType::Discount
                     ? 'A '.number_format($amount, 0).' TZS discount was applied to rental #'.$rental->id.' and needs your review.'
-                    : 'A '.number_format($amount, 0).' TZS damage/additional charge was applied to rental #'.$rental->id.' and needs your review.',
+                    : 'A '.number_format($amount, 0).' TZS '.$type->label().' was applied to rental #'.$rental->id.' and needs your review.',
                 route('admin.approvals.index'),
                 'charge_approval_requested',
             );

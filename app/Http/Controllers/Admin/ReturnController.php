@@ -62,12 +62,13 @@ final class ReturnController extends Controller
             ? Carbon::parse((string) $data['returned_at'])
             : now();
         $extra = (float) ($data['additional_charges'] ?? 0);
+        $late = (float) ($data['late_fee'] ?? 0);
         $vehicle = $rental->vehicle;
 
         // Inspection evidence collected as the car comes back.
         $photos = SlotPhotos::store($request, 'photos', 'returns');
 
-        DB::transaction(function () use ($rental, $vehicle, $data, $returnedAt, $extra, $photos) {
+        DB::transaction(function () use ($rental, $vehicle, $data, $returnedAt, $extra, $late, $photos) {
             $rental->vehicleReturn()->create([
                 'vehicle_id' => $rental->vehicle_id,
                 'returned_at' => $returnedAt,
@@ -81,6 +82,7 @@ final class ReturnController extends Controller
             ]);
 
             $rental->additional_charges = (float) $rental->additional_charges + $extra;
+            $rental->late_fee = $late;
             $rental->status = RentalStatus::Completed;
             $rental->recalculate();
             $rental->save();
@@ -126,17 +128,21 @@ final class ReturnController extends Controller
         $audit->log(
             'return.recorded',
             'Recorded return of rental #'.$rental->id.' ('.($data['condition'] ?? '').')'
-                .($extra > 0 ? ' with '.number_format($extra, 0).' TZS in damage/additional charges.' : '.'),
+                .($extra > 0 ? ' with '.number_format($extra, 0).' TZS in damage/additional charges.' : '')
+                .($late > 0 ? ($extra > 0 ? ' and ' : ' with ').number_format($late, 0).' TZS late return charge.' : '.'),
             $rental,
             [
                 'condition' => $data['condition'] ?? null,
                 'additional_charges' => $extra,
+                'late_fee' => $late,
                 'damage_notes' => $data['damage_notes'] ?? null,
             ],
         );
 
         // UC14: a material damage / additional charge goes to a manager to sign off.
         $approvals->maybeRequest($rental, ApprovalType::Damage, $extra, $data['damage_notes'] ?? null);
+        // A material late-return charge follows the same review path.
+        $approvals->maybeRequest($rental, ApprovalType::Late, $late, $data['damage_notes'] ?? null);
 
         return redirect()->route('admin.rentals.show', $rental)
             ->with('status', 'Vehicle return recorded and the rental completed.');

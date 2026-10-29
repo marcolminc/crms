@@ -42,6 +42,29 @@ final class RentalController extends Controller
     }
 
     /**
+     * FR9: the customer's copy of the settlement invoice for their own hire.
+     */
+    public function invoice(Request $request, Rental $rental)
+    {
+        $this->ensureOwnership($request, $rental);
+
+        $rental->load([
+            'vehicle',
+            'customer.user',
+            'payments',
+            'fines',
+            'vehicleReturn',
+        ]);
+
+        return view('customer.rentals.invoice', [
+            'rental' => $rental,
+            'paid' => $rental->paidAmount(),
+            'balance' => $rental->balanceDue(),
+            'surplus' => max(0, $rental->paidAmount() - (float) $rental->total_amount),
+        ]);
+    }
+
+    /**
      * UC10: keep the same vehicle for extra days. The new balance is picked up
      * by the existing online-payment flow on this page.
      */

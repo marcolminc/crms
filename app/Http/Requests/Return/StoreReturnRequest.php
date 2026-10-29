@@ -27,6 +27,7 @@ final class StoreReturnRequest extends FormRequest
             'mileage_at_return' => ['nullable', 'integer', 'min:0', 'max:99999999'],
             'damage_notes' => ['nullable', 'string', 'max:5000'],
             'additional_charges' => ['nullable', 'numeric', 'min:0', 'max:9999999999'],
+            'late_fee' => ['nullable', 'numeric', 'min:0', 'max:9999999999'],
             // Inspection evidence taken as the car comes back.
             'photos' => ['nullable', 'array'],
         ];

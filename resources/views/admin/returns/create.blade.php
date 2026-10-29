@@ -46,6 +46,8 @@
                 <x-field label="Mileage at return (km)" name="mileage_at_return" type="number"
                          :value="$vehicle?->mileage" required />
                 <x-field label="Additional / damage charges (TZS)" name="additional_charges" type="number" :value="old('additional_charges', 0)" />
+                <x-field label="Late return charge (TZS)" name="late_fee" type="number" :value="old('late_fee', 0)"
+                         :hint="'Expected back: '.optional($rental->end_date)->format('d M Y')" />
 
                 <div class="mb-4 sm:col-span-2 lg:col-span-3">
                     <label for="damage_notes" class="mb-1 block text-sm font-medium text-slate-700">Damage notes</label>

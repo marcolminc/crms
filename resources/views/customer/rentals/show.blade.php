@@ -12,6 +12,10 @@
         :title="'Rental #'.$rental->id"
         :description="($rental->vehicle?->display_name ?? 'Vehicle').' · '.$rental->start_date->format('d M Y').' → '.$rental->end_date->format('d M Y')">
         <x-slot:actions>
+            <a href="{{ route('customer.rentals.invoice', $rental) }}"
+               class="rounded-md border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">
+                Invoice
+            </a>
             <a href="{{ route('customer.rentals.index') }}"
                class="rounded-md border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">
                 Back to rentals

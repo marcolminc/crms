@@ -34,6 +34,7 @@ class Rental extends Model
         'subtotal',
         'additional_charges',
         'driver_fee',
+        'late_fee',
         'discount',
         'total_amount',
         'status',
@@ -59,6 +60,7 @@ class Rental extends Model
             'subtotal' => 'decimal:2',
             'additional_charges' => 'decimal:2',
             'driver_fee' => 'decimal:2',
+            'late_fee' => 'decimal:2',
             'discount' => 'decimal:2',
             'total_amount' => 'decimal:2',
             'status' => RentalStatus::class,
@@ -234,6 +236,7 @@ class Rental extends Model
             (float) $this->subtotal
                 + (float) $this->additional_charges
                 + (float) $this->driver_fee
+                + (float) $this->late_fee
                 - (float) $this->discount
         );
     }

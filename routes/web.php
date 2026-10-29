@@ -11,6 +11,7 @@ use App\Http\Controllers\Admin\RentalController;
 use App\Http\Controllers\Admin\ReportController;
 use App\Http\Controllers\Admin\ReservationController;
 use App\Http\Controllers\Admin\ReturnController;
+use App\Http\Controllers\Admin\SettlementController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\VehicleController;
 use App\Http\Controllers\Auth\LoginController;
@@ -67,6 +68,7 @@ Route::middleware(['auth', 'active', 'role:customer'])->group(function () {
 
     Route::get('rentals', [CustomerReservation::class, 'rentals'])->name('customer.rentals.index');
     Route::get('rentals/{rental}', [CustomerRental::class, 'show'])->name('customer.rentals.show');
+    Route::get('rentals/{rental}/invoice', [CustomerRental::class, 'invoice'])->name('customer.rentals.invoice');
     Route::put('rentals/{rental}/extend', [CustomerRental::class, 'extend'])->name('customer.rentals.extend');
     Route::post('rentals/{rental}/rate', [CustomerRental::class, 'rate'])->name('customer.rentals.rate');
     Route::post('rentals/{rental}/return-request', [CustomerRental::class, 'requestReturn'])->name('customer.rentals.return-request');
@@ -163,6 +165,12 @@ Route::middleware(['auth', 'staff'])->prefix('admin')->name('admin.')->group(fun
     Route::get('rentals/{rental}/payment', [PaymentController::class, 'create'])->name('payments.create');
     Route::post('rentals/{rental}/payment', [PaymentController::class, 'store'])->name('payments.store');
     Route::get('payments/{payment}/receipt', [PaymentController::class, 'receipt'])->name('payments.receipt');
+
+    // FR9: the settlement invoice and the refund of an overpayment. The
+    // SettlementController limits the refund to finance and managers.
+    Route::get('rentals/{rental}/invoice', [RentalController::class, 'invoice'])->name('rentals.invoice');
+    Route::get('rentals/{rental}/refund', [SettlementController::class, 'refundForm'])->name('rentals.refund');
+    Route::post('rentals/{rental}/refund', [SettlementController::class, 'refund'])->name('rentals.refund.store');
 
     Route::get('reports', [ReportController::class, 'index'])->name('reports.index');
     Route::get('reports/{report}', [ReportController::class, 'show'])->name('reports.show');
