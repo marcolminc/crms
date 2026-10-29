@@ -16,6 +16,7 @@ use App\Models\Payment;
 use App\Models\Rental;
 use App\Models\Reservation;
 use App\Models\Vehicle;
+use App\Services\AuditLogger;
 use App\Services\NotificationService;
 use App\Support\SlotPhotos;
 use Carbon\Carbon;
@@ -120,7 +121,7 @@ final class RentalController extends Controller
         ]);
     }
 
-    public function store(StoreRentalRequest $request)
+    public function store(StoreRentalRequest $request, AuditLogger $audit)
     {
         $data = $request->validated();
         $vehicle = Vehicle::query()->findOrFail($data['vehicle']);
@@ -175,6 +176,12 @@ final class RentalController extends Controller
             return $rental;
         });
 
+        $audit->log('rental.created', 'Started rental #'.$rental->id.' of '.$vehicle->display_name.' for '.number_format((float) $rental->total_amount, 0).' TZS.', $rental, [
+            'discount' => (float) $rental->discount,
+            'additional_charges' => (float) $rental->additional_charges,
+            'total_amount' => (float) $rental->total_amount,
+        ]);
+
         return redirect()
             ->route('admin.rentals.show', $rental)
             ->with('status', 'Rental created and the vehicle is now on hire.');
@@ -198,11 +205,14 @@ final class RentalController extends Controller
         ]);
     }
 
-    public function update(UpdateRentalRequest $request, Rental $rental)
+    public function update(UpdateRentalRequest $request, Rental $rental, AuditLogger $audit)
     {
         $data = $request->validated();
         $start = $rental->start_date->copy()->startOfDay();
         $end = Carbon::createFromFormat('Y-m-d', $data['end_date'])->startOfDay();
+
+        $previousDiscount = (float) $rental->discount;
+        $previousCharges = (float) $rental->additional_charges;
 
         $rental->end_date = $end->toDateString();
         $rental->days = (int) $start->diffInDays($end) + 1;
@@ -214,10 +224,25 @@ final class RentalController extends Controller
         $rental->recalculate();
         $rental->save();
 
+        $newDiscount = (float) $rental->discount;
+        $newCharges = (float) $rental->additional_charges;
+
+        if ($newDiscount !== $previousDiscount || $newCharges !== $previousCharges) {
+            $audit->log('rental.updated', 'Updated rental #'.$rental->id.' money terms.', $rental, [
+                'discount_before' => $previousDiscount,
+                'discount_after' => $newDiscount,
+                'charges_before' => $previousCharges,
+                'charges_after' => $newCharges,
+                'total_amount' => (float) $rental->total_amount,
+            ]);
+        } else {
+            $audit->log('rental.updated', 'Updated rental #'.$rental->id.'.', $rental);
+        }
+
         return redirect()->route('admin.rentals.show', $rental)->with('status', 'Rental updated.');
     }
 
-    public function cancel(CancelRentalRequest $request, Rental $rental)
+    public function cancel(CancelRentalRequest $request, Rental $rental, AuditLogger $audit)
     {
         if (! in_array($rental->status, [RentalStatus::Active, RentalStatus::Overdue], true)) {
             return redirect()->back()->with('error', 'Only active or overdue rentals can be cancelled.');
@@ -247,6 +272,8 @@ final class RentalController extends Controller
             route('customer.rentals.index'),
             'rental_cancelled'
         );
+
+        $audit->log('rental.cancelled', 'Cancelled rental #'.$rental->id.'. Reason: '.$reason, $rental, ['reason' => $reason]);
 
         return redirect()->back()->with('status', 'Rental cancelled and the customer notified.');
     }

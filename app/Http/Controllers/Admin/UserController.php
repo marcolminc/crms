@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\User\StoreUserRequest;
 use App\Http\Requests\User\UpdateUserRequest;
 use App\Models\User;
+use App\Services\AuditLogger;
 use Illuminate\Http\Request;
 
 final class UserController extends Controller
@@ -43,9 +44,11 @@ final class UserController extends Controller
         ]);
     }
 
-    public function store(StoreUserRequest $request)
+    public function store(StoreUserRequest $request, AuditLogger $audit)
     {
-        User::create($request->validated());
+        $user = User::create($request->validated());
+
+        $audit->log('user.created', "Created user account {$user->email} ({$user->role->label()}).", $user);
 
         return redirect()->route('admin.users.index')->with('status', 'User account created.');
     }
@@ -58,19 +61,25 @@ final class UserController extends Controller
         ]);
     }
 
-    public function update(UpdateUserRequest $request, User $user)
+    public function update(UpdateUserRequest $request, User $user, AuditLogger $audit)
     {
         $data = $request->validated();
         if (empty($data['password'])) {
             unset($data['password']);
         }
 
+        $previousRole = $user->role;
         $user->update($data);
+
+        $change = $previousRole !== $user->role
+            ? " (role changed from {$previousRole->label()} to {$user->role->label()})"
+            : '';
+        $audit->log('user.updated', "Updated user account {$user->email}.$change", $user);
 
         return redirect()->route('admin.users.index')->with('status', 'User updated.');
     }
 
-    public function destroy(User $user)
+    public function destroy(User $user, AuditLogger $audit)
     {
         if ($user->is(auth()->user())) {
             return redirect()->back()->with('error', 'You cannot delete your own account.');
@@ -89,17 +98,21 @@ final class UserController extends Controller
         $customer?->delete();
         $user->delete();
 
+        $audit->log('user.deleted', "Deleted user account {$user->email}.", null);
+
         return redirect()->route('admin.users.index')->with('status', 'User deleted.');
     }
 
-    public function activate(User $user)
+    public function activate(User $user, AuditLogger $audit)
     {
         $user->update(['is_active' => true]);
+
+        $audit->log('user.activated', "Activated account for {$user->email}.", $user);
 
         return redirect()->back()->with('status', "Account for {$user->name} activated.");
     }
 
-    public function deactivate(User $user)
+    public function deactivate(User $user, AuditLogger $audit)
     {
         if ($user->is(auth()->user())) {
             return redirect()->back()->with('error', 'You cannot deactivate your own account.');
@@ -110,6 +123,8 @@ final class UserController extends Controller
         }
 
         $user->update(['is_active' => false]);
+
+        $audit->log('user.deactivated', "Deactivated account for {$user->email}.", $user);
 
         return redirect()->back()->with('status', "Account for {$user->name} deactivated.");
     }

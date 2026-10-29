@@ -11,6 +11,7 @@ use App\Models\Maintenance;
 use App\Models\Rental;
 use App\Models\Reservation;
 use App\Models\Vehicle;
+use App\Services\AuditLogger;
 use Illuminate\Http\Request;
 
 final class MaintenanceController extends Controller
@@ -42,7 +43,7 @@ final class MaintenanceController extends Controller
         ]);
     }
 
-    public function store(StoreMaintenanceRequest $request)
+    public function store(StoreMaintenanceRequest $request, AuditLogger $audit)
     {
         $maintenance = Maintenance::create($request->validated());
         $maintenance->load('vehicle');
@@ -50,6 +51,8 @@ final class MaintenanceController extends Controller
         if ($maintenance->isOngoing() && $maintenance->end_date === null) {
             $maintenance->vehicle?->update(['status' => VehicleStatus::Maintenance]);
         }
+
+        $audit->log('maintenance.created', 'Logged maintenance for '.($maintenance->vehicle?->plate_number ?? "vehicle #{$maintenance->vehicle_id}").'.', $maintenance);
 
         return redirect()->route('admin.maintenances.index')->with('status', 'Maintenance record created.');
     }
@@ -64,7 +67,7 @@ final class MaintenanceController extends Controller
         ]);
     }
 
-    public function update(UpdateMaintenanceRequest $request, Maintenance $maintenance)
+    public function update(UpdateMaintenanceRequest $request, Maintenance $maintenance, AuditLogger $audit)
     {
         $maintenance->update($request->validated());
         $maintenance->load('vehicle');
@@ -75,10 +78,12 @@ final class MaintenanceController extends Controller
             $this->releaseVehicle($maintenance->vehicle, $maintenance);
         }
 
+        $audit->log('maintenance.updated', 'Updated maintenance #'.$maintenance->id.' for '.($maintenance->vehicle?->plate_number ?? "vehicle #{$maintenance->vehicle_id}").' (status '.$maintenance->status->label().').', $maintenance);
+
         return redirect()->route('admin.maintenances.index')->with('status', 'Maintenance record updated.');
     }
 
-    public function destroy(Maintenance $maintenance)
+    public function destroy(Maintenance $maintenance, AuditLogger $audit)
     {
         if ($maintenance->status === MaintenanceStatus::InProgress) {
             return redirect()->back()->with('error', 'Maintenance work in progress cannot be deleted. Mark it completed first.');
@@ -91,6 +96,8 @@ final class MaintenanceController extends Controller
         if ($wasOngoing) {
             $this->releaseVehicle($vehicle, $maintenance);
         }
+
+        $audit->log('maintenance.deleted', 'Deleted maintenance record.', null);
 
         return redirect()->route('admin.maintenances.index')->with('status', 'Maintenance record deleted.');
     }

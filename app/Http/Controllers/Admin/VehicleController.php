@@ -12,6 +12,7 @@ use App\Models\Maintenance;
 use App\Models\Rental;
 use App\Models\Reservation;
 use App\Models\Vehicle;
+use App\Services\AuditLogger;
 use App\Services\NotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
@@ -55,7 +56,7 @@ final class VehicleController extends Controller
         ]);
     }
 
-    public function store(StoreVehicleRequest $request)
+    public function store(StoreVehicleRequest $request, AuditLogger $audit)
     {
         $data = $request->validated();
         unset($data['photos'], $data['remove_images']);
@@ -73,6 +74,8 @@ final class VehicleController extends Controller
 
         Vehicle::create($data);
 
+        $audit->log('vehicle.created', 'Added vehicle '.$data['plate_number'].' to the fleet.', null, ['plate_number' => $data['plate_number'] ?? null, 'rate_per_day' => $data['rate_per_day'] ?? null]);
+
         return redirect()->route('admin.vehicles.index')->with('status', 'Vehicle added to the fleet.');
     }
 
@@ -85,7 +88,7 @@ final class VehicleController extends Controller
         ]);
     }
 
-    public function update(UpdateVehicleRequest $request, Vehicle $vehicle)
+    public function update(UpdateVehicleRequest $request, Vehicle $vehicle, AuditLogger $audit)
     {
         $data = $request->validated();
         unset($data['photos'], $data['remove_images']);
@@ -116,13 +119,20 @@ final class VehicleController extends Controller
 
         $data['images'] = $map === [] ? null : $map;
 
+        $previousRate = (float) $vehicle->rate_per_day;
+
         $vehicle->update($data);
         $this->deletePhotos($removals);
+
+        $change = (float) $vehicle->rate_per_day !== $previousRate
+            ? " (daily rate changed from {$previousRate} to {$vehicle->rate_per_day} TZS)"
+            : '';
+        $audit->log('vehicle.updated', "Updated vehicle {$vehicle->plate_number}.".$change, $vehicle, ['rate_per_day' => (float) $vehicle->rate_per_day]);
 
         return redirect()->route('admin.vehicles.index')->with('status', 'Vehicle updated.');
     }
 
-    public function destroy(Vehicle $vehicle)
+    public function destroy(Vehicle $vehicle, AuditLogger $audit)
     {
         $openRental = Rental::query()->open()->where('vehicle_id', $vehicle->id)->exists();
         if ($openRental) {
@@ -136,10 +146,12 @@ final class VehicleController extends Controller
 
         $vehicle->delete();
 
+        $audit->log('vehicle.deleted', "Removed vehicle {$vehicle->plate_number} from the fleet.", null, ['plate_number' => $vehicle->plate_number]);
+
         return redirect()->route('admin.vehicles.index')->with('status', 'Vehicle removed from the fleet.');
     }
 
-    public function updateStatus(UpdateVehicleStatusRequest $request, Vehicle $vehicle)
+    public function updateStatus(UpdateVehicleStatusRequest $request, Vehicle $vehicle, AuditLogger $audit)
     {
         $new = VehicleStatus::from($request->validated('status'));
         $previous = $vehicle->status;
@@ -166,6 +178,8 @@ final class VehicleController extends Controller
         }
 
         $vehicle->update(['status' => $new]);
+
+        $audit->log('vehicle.status_changed', "Changed vehicle {$vehicle->plate_number} status from {$previous->label()} to {$new->label()}.", $vehicle, ['from' => $previous->value, 'to' => $new->value]);
 
         if ($new === VehicleStatus::OutOfService) {
             $this->notifications->forUsers(

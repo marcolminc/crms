@@ -40,6 +40,7 @@
         if ($user->hasRole(\App\Enums\UserRole::Admin)) {
             $groups = ['Administration' => [
                 ['label' => 'Users & roles', 'route' => 'admin.users.index'],
+                ['label' => 'Audit log', 'route' => 'admin.audit-log.index'],
             ]] + $groups;
         }
     } elseif ($user?->isDriver()) {

@@ -9,6 +9,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Payment\StorePaymentRequest;
 use App\Models\Payment;
 use App\Models\Rental;
+use App\Services\AuditLogger;
 use App\Services\PaymentDraft;
 use App\Services\PaymentRecordingService;
 use Carbon\Carbon;
@@ -76,7 +77,7 @@ final class PaymentController extends Controller
         ]);
     }
 
-    public function store(StorePaymentRequest $request, Rental $rental)
+    public function store(StorePaymentRequest $request, Rental $rental, AuditLogger $audit)
     {
         if ($rental->status === RentalStatus::Cancelled) {
             return redirect()->route('admin.rentals.index')
@@ -95,6 +96,13 @@ final class PaymentController extends Controller
         ));
 
         $this->payments->announce($payment, route('admin.payments.receipt', $payment));
+
+        $audit->log('payment.recorded', 'Recorded '.$payment->amount.' TZS '.PaymentMethod::from($data['payment_method'])->label().' payment (receipt '.$payment->receipt_number.') on rental #'.$rental->id.'.', $payment, [
+            'amount' => (float) $payment->amount,
+            'method' => $data['payment_method'],
+            'receipt_number' => $payment->receipt_number,
+            'rental_id' => $rental->id,
+        ]);
 
         return redirect()->route('admin.payments.receipt', $payment)
             ->with('status', 'Payment recorded. Receipt '.$payment->receipt_number.' is ready to print.');

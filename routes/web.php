@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Admin\AuditLogController;
 use App\Http\Controllers\Admin\CustomerController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\MaintenanceController;
@@ -136,5 +137,8 @@ Route::middleware(['auth', 'staff'])->prefix('admin')->name('admin.')->group(fun
         Route::resource('users', UserController::class)->except(['show']);
         Route::put('users/{user}/activate', [UserController::class, 'activate'])->name('users.activate');
         Route::put('users/{user}/deactivate', [UserController::class, 'deactivate'])->name('users.deactivate');
+
+        // FR14: the audit trail is administrator-only and read-only.
+        Route::get('audit-log', [AuditLogController::class, 'index'])->name('audit-log.index');
     });
 });

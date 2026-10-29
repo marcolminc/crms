@@ -10,6 +10,7 @@ use App\Http\Requests\Reservation\RejectReservationRequest;
 use App\Models\Rental;
 use App\Models\Reservation;
 use App\Models\Vehicle;
+use App\Services\AuditLogger;
 use App\Services\NotificationService;
 use Illuminate\Http\Request;
 
@@ -65,7 +66,7 @@ final class ReservationController extends Controller
         ]);
     }
 
-    public function confirm(Reservation $reservation)
+    public function confirm(Reservation $reservation, AuditLogger $audit)
     {
         if ($reservation->status !== ReservationStatus::Pending) {
             return redirect()->back()->with('error', 'Only pending reservations can be confirmed.');
@@ -98,10 +99,12 @@ final class ReservationController extends Controller
             'reservation_confirmed'
         );
 
+        $audit->log('reservation.confirmed', 'Confirmed reservation #'.$reservation->id.' for '.$reservation->vehicle->display_name.'.', $reservation);
+
         return redirect()->back()->with('status', 'Reservation confirmed and the customer notified.');
     }
 
-    public function reject(RejectReservationRequest $request, Reservation $reservation)
+    public function reject(RejectReservationRequest $request, Reservation $reservation, AuditLogger $audit)
     {
         if ($reservation->status !== ReservationStatus::Pending) {
             return redirect()->back()->with('error', 'Only pending reservations can be rejected.');
@@ -121,10 +124,12 @@ final class ReservationController extends Controller
             'reservation_rejected'
         );
 
+        $audit->log('reservation.rejected', 'Rejected reservation #'.$reservation->id.'. Reason: '.$request->validated('reason'), $reservation, ['reason' => $request->validated('reason')]);
+
         return redirect()->back()->with('status', 'Reservation rejected and the customer notified.');
     }
 
-    public function cancel(CancelReservationRequest $request, Reservation $reservation)
+    public function cancel(CancelReservationRequest $request, Reservation $reservation, AuditLogger $audit)
     {
         if (! in_array($reservation->status, [ReservationStatus::Pending, ReservationStatus::Confirmed], true)) {
             return redirect()->back()->with('error', 'Only pending or confirmed reservations can be cancelled.');
@@ -159,10 +164,12 @@ final class ReservationController extends Controller
             'reservation_cancelled'
         );
 
+        $audit->log('reservation.cancelled', 'Cancelled reservation #'.$reservation->id.($reason ? '. Reason: '.$reason : '.'), $reservation, $reason ? ['reason' => $reason] : []);
+
         return redirect()->back()->with('status', 'Reservation cancelled and the customer notified.');
     }
 
-    public function destroy(Reservation $reservation)
+    public function destroy(Reservation $reservation, AuditLogger $audit)
     {
         $deletable = [ReservationStatus::Cancelled, ReservationStatus::Rejected, ReservationStatus::Completed];
 
@@ -175,6 +182,8 @@ final class ReservationController extends Controller
         }
 
         $reservation->delete();
+
+        $audit->log('reservation.deleted', 'Deleted reservation #'.$reservation->id.'.', null);
 
         return redirect()->route('admin.reservations.index')->with('status', 'Reservation deleted.');
     }

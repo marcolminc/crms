@@ -10,6 +10,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Return\StoreReturnRequest;
 use App\Models\Rental;
 use App\Models\Reservation;
+use App\Services\AuditLogger;
 use App\Services\NotificationService;
 use App\Support\SlotPhotos;
 use Carbon\Carbon;
@@ -40,7 +41,7 @@ final class ReturnController extends Controller
         ]);
     }
 
-    public function store(StoreReturnRequest $request, Rental $rental)
+    public function store(StoreReturnRequest $request, Rental $rental, AuditLogger $audit)
     {
         $rental->load(['vehicle', 'customer']);
 
@@ -119,6 +120,18 @@ final class ReturnController extends Controller
                 'rental_completed'
             );
         });
+
+        $audit->log(
+            'return.recorded',
+            'Recorded return of rental #'.$rental->id.' ('.($data['condition'] ?? '').')'
+                .($extra > 0 ? ' with '.number_format($extra, 0).' TZS in damage/additional charges.' : '.'),
+            $rental,
+            [
+                'condition' => $data['condition'] ?? null,
+                'additional_charges' => $extra,
+                'damage_notes' => $data['damage_notes'] ?? null,
+            ],
+        );
 
         return redirect()->route('admin.rentals.show', $rental)
             ->with('status', 'Vehicle return recorded and the rental completed.');
