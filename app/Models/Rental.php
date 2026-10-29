@@ -2,10 +2,13 @@
 
 namespace App\Models;
 
+use App\Enums\MaintenanceStatus;
 use App\Enums\PaymentStatus;
 use App\Enums\PaymentType;
 use App\Enums\RentalStatus;
+use App\Enums\ReservationStatus;
 use App\Models\Concerns\HasPhotoSlots;
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -31,6 +34,9 @@ class Rental extends Model
         'discount',
         'total_amount',
         'status',
+        'rating',
+        'rating_comment',
+        'rated_at',
         'pickup_location',
         'dropoff_location',
         'odometer_at_pickup',
@@ -51,6 +57,8 @@ class Rental extends Model
             'discount' => 'decimal:2',
             'total_amount' => 'decimal:2',
             'status' => RentalStatus::class,
+            'rating' => 'integer',
+            'rated_at' => 'datetime',
             'odometer_at_pickup' => 'integer',
             'pickup_photos' => 'array',
         ];
@@ -128,6 +136,53 @@ class Rental extends Model
     public function isSettled(): bool
     {
         return $this->balanceDue() <= 0;
+    }
+
+    /**
+     * UC21: a hire can be rated once it has been returned and only if the
+     * customer has not already left a rating.
+     */
+    public function isRateable(): bool
+    {
+        return $this->status === RentalStatus::Completed && $this->rating === null;
+    }
+
+    /**
+     * UC10: whether the same vehicle can be kept for the extra days implied by
+     * the proposed drop-off. Only the days beyond the current end are examined,
+     * so the rental being extended never blocks itself.
+     */
+    public function extensionWouldConflict(Carbon $newEnd): bool
+    {
+        $from = $this->end_date->copy()->addDay()->startOfDay();
+
+        if ($newEnd->lt($from)) {
+            return false;
+        }
+
+        $reservationClash = Reservation::query()
+            ->where('vehicle_id', $this->vehicle_id)
+            ->whereIn('status', [ReservationStatus::Pending, ReservationStatus::Confirmed])
+            ->where('start_date', '<=', $newEnd)
+            ->where('end_date', '>=', $from)
+            ->exists();
+
+        $rentalClash = static::query()
+            ->where('vehicle_id', $this->vehicle_id)
+            ->whereKeyNot($this->id)
+            ->whereIn('status', [RentalStatus::Active, RentalStatus::Overdue])
+            ->where('start_date', '<=', $newEnd)
+            ->where('end_date', '>=', $from)
+            ->exists();
+
+        $maintenanceClash = Maintenance::query()
+            ->where('vehicle_id', $this->vehicle_id)
+            ->whereIn('status', [MaintenanceStatus::Scheduled, MaintenanceStatus::InProgress])
+            ->where('start_date', '<=', $newEnd)
+            ->where(fn ($query) => $query->whereNull('end_date')->orWhere('end_date', '>=', $from))
+            ->exists();
+
+        return $reservationClash || $rentalClash || $maintenanceClash;
     }
 
     /**

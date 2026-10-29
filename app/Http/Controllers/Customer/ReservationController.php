@@ -2,13 +2,19 @@
 
 namespace App\Http\Controllers\Customer;
 
+use App\Enums\MaintenanceStatus;
 use App\Enums\PaymentMethod;
+use App\Enums\RentalStatus;
 use App\Enums\ReservationStatus;
 use App\Enums\VehicleStatus;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Customer\ModifyReservationRequest;
 use App\Http\Requests\StoreReservationRequest;
+use App\Models\Maintenance;
+use App\Models\Rental;
 use App\Models\Reservation;
 use App\Models\Vehicle;
+use App\Services\AuditLogger;
 use App\Services\NotificationService;
 use App\Services\OnlinePaymentService;
 use Carbon\Carbon;
@@ -143,6 +149,93 @@ final class ReservationController extends Controller
         return redirect()
             ->route('customer.reservations.index')
             ->with('status', 'Your reservation has been cancelled.');
+    }
+
+    /**
+     * UC07: the customer changes the pick-up / drop-off dates on their own open
+     * reservation, subject to the vehicle still being free for the new window.
+     */
+    public function update(ModifyReservationRequest $request, Reservation $reservation, NotificationService $notifications, AuditLogger $audit)
+    {
+        $this->ensureOwnership($request, $reservation);
+
+        if (! $reservation->isModifiableByCustomer()) {
+            return back()->with('error', 'This reservation can no longer be changed.');
+        }
+
+        $start = Carbon::createFromFormat('Y-m-d', (string) $request->validated('start_date'))->startOfDay();
+        $end = Carbon::createFromFormat('Y-m-d', (string) $request->validated('end_date'))->startOfDay();
+        $vehicle = $reservation->vehicle;
+
+        if ($vehicle === null) {
+            return back()->with('error', 'The vehicle on this reservation is no longer in our fleet. Please cancel and book again.');
+        }
+
+        if ($this->newDatesConflict($reservation, $vehicle, $start, $end)) {
+            return back()
+                ->withInput()
+                ->withErrors(['end_date' => 'That vehicle is not free between the selected dates. Please choose a different period.']);
+        }
+
+        $days = (int) $start->diffInDays($end) + 1;
+
+        $reservation->update([
+            'start_date' => $start->toDateString(),
+            'end_date' => $end->toDateString(),
+            'estimated_total' => (float) $vehicle->rate_per_day * $days,
+        ]);
+
+        $notifications->forUsers(
+            $notifications->bookingDesk(),
+            'Reservation dates changed by customer',
+            ($reservation->customer->display_name ?? 'A customer')
+                .' changed reservation #'.$reservation->id
+                .' for '.($vehicle->display_name).' to '
+                .$start->format('d M Y').' - '.$end->format('d M Y').'.',
+            route('admin.reservations.show', $reservation),
+            'reservation'
+        );
+
+        $audit->log(
+            'reservation.customer_modified',
+            'Customer changed reservation #'.$reservation->id.' dates to '.$start->format('Y-m-d').'–'.$end->format('Y-m-d').'.',
+            $reservation
+        );
+
+        return redirect()
+            ->route('customer.reservations.show', $reservation)
+            ->with('status', 'Your reservation dates have been updated.');
+    }
+
+    /**
+     * Any live booking for the same vehicle over the requested window, ignoring
+     * the reservation being modified (its own row must not block itself).
+     */
+    private function newDatesConflict(Reservation $reservation, Vehicle $vehicle, Carbon $start, Carbon $end): bool
+    {
+        $reservationClash = Reservation::query()
+            ->where('vehicle_id', $vehicle->id)
+            ->whereKeyNot($reservation->id)
+            ->active()
+            ->where('start_date', '<=', $end)
+            ->where('end_date', '>=', $start)
+            ->exists();
+
+        $rentalClash = Rental::query()
+            ->where('vehicle_id', $vehicle->id)
+            ->whereIn('status', [RentalStatus::Active, RentalStatus::Overdue])
+            ->where('start_date', '<=', $end)
+            ->where('end_date', '>=', $start)
+            ->exists();
+
+        $maintenanceClash = Maintenance::query()
+            ->where('vehicle_id', $vehicle->id)
+            ->whereIn('status', [MaintenanceStatus::Scheduled, MaintenanceStatus::InProgress])
+            ->where('start_date', '<=', $end)
+            ->where(fn ($query) => $query->whereNull('end_date')->orWhere('end_date', '>=', $start))
+            ->exists();
+
+        return $reservationClash || $rentalClash || $maintenanceClash;
     }
 
     public function rentals(Request $request, OnlinePaymentService $checkout)

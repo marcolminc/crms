@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\ReservationStatus;
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -65,6 +66,18 @@ class Reservation extends Model
     public function days(): int
     {
         return $this->start_date->diffInDays($this->end_date) + 1;
+    }
+
+    /**
+     * UC07: the customer may change the dates themselves only while the booking
+     * is still open (pending or confirmed), has not started yet, and has not
+     * been picked up as a rental.
+     */
+    public function isModifiableByCustomer(): bool
+    {
+        return in_array($this->status, [ReservationStatus::Pending, ReservationStatus::Confirmed], true)
+            && $this->start_date->gte(Carbon::today())
+            && $this->rental === null;
     }
 
     /**

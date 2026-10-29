@@ -28,7 +28,11 @@
                             &middot; {{ $rental->days }} day(s)
                         </p>
                     </div>
-                    <x-badge :value="$rental->status->value" />
+                    <div class="flex flex-col items-end gap-2">
+                        <x-badge :value="$rental->status->value" />
+                        <a href="{{ route('customer.rentals.show', $rental) }}"
+                           class="text-sm font-medium text-emerald-700 hover:underline">View &amp; manage &rarr;</a>
+                    </div>
                 </div>
 
                 <dl class="mt-4 grid gap-3 text-sm sm:grid-cols-3">

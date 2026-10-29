@@ -6,6 +6,7 @@
     @php
         $cancellable = in_array($reservation->status->value, ['pending', 'confirmed'], true)
             && $reservation->start_date->gte(now()->startOfDay());
+        $modifiable = $reservation->isModifiableByCustomer() && $reservation->vehicle !== null;
     @endphp
 
     <x-page-header :title="'Reservation #'.$reservation->id" description="Details of your booking request.">
@@ -82,12 +83,42 @@
                 @if ($reservation->rental)
                     <p class="mt-4 text-sm text-slate-600">
                         This reservation has been converted to rental
-                        <a href="{{ route('customer.rentals.index') }}" class="text-emerald-700 underline">
+                        <a href="{{ route('customer.rentals.show', $reservation->rental) }}" class="text-emerald-700 underline">
                             #{{ $reservation->rental->id }}
                         </a>.
                     </p>
                 @endif
             </x-card>
+
+            @if ($modifiable)
+                <x-card title="Change your dates">
+                    <p class="mb-3 text-sm text-slate-500">Adjust the pick-up and drop-off dates. We re-check that the vehicle is free for the new period.</p>
+                    <form method="POST" action="{{ route('customer.reservations.update', $reservation) }}" class="space-y-4">
+                        @csrf
+                        @method('PUT')
+                        <div class="grid gap-4 sm:grid-cols-2">
+                            <div>
+                                <label for="start_date" class="mb-1 block text-sm font-medium text-slate-700">Pick-up date</label>
+                                <input type="date" id="start_date" name="start_date"
+                                       value="{{ old('start_date', $reservation->start_date->toDateString()) }}"
+                                       min="{{ now()->toDateString() }}"
+                                       class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-emerald-500 focus:ring-emerald-500" required>
+                                @error('start_date')<p class="mt-1 text-xs text-rose-600">{{ $message }}</p>@enderror
+                            </div>
+                            <div>
+                                <label for="end_date" class="mb-1 block text-sm font-medium text-slate-700">Drop-off date</label>
+                                <input type="date" id="end_date" name="end_date"
+                                       value="{{ old('end_date', $reservation->end_date->toDateString()) }}"
+                                       min="{{ now()->toDateString() }}"
+                                       class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-emerald-500 focus:ring-emerald-500" required>
+                                @error('end_date')<p class="mt-1 text-xs text-rose-600">{{ $message }}</p>@enderror
+                            </div>
+                        </div>
+                        <button type="submit"
+                                class="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700">Save new dates</button>
+                    </form>
+                </x-card>
+            @endif
         </div>
 
         <div>

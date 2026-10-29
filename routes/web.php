@@ -23,6 +23,7 @@ use App\Http\Controllers\Customer\NotificationController;
 use App\Http\Controllers\Customer\PaymentController as CustomerPayment;
 use App\Http\Controllers\Customer\ProfileController;
 use App\Http\Controllers\Customer\ReservationController as CustomerReservation;
+use App\Http\Controllers\Customer\RentalController as CustomerRental;
 use App\Http\Controllers\VehicleBrowseController;
 use Illuminate\Support\Facades\Route;
 
@@ -59,9 +60,13 @@ Route::middleware(['auth', 'active', 'role:customer'])->group(function () {
     Route::get('reservations/create', [CustomerReservation::class, 'create'])->name('customer.reservations.create');
     Route::post('reservations', [CustomerReservation::class, 'store'])->name('customer.reservations.store');
     Route::get('reservations/{reservation}', [CustomerReservation::class, 'show'])->name('customer.reservations.show');
+    Route::put('reservations/{reservation}', [CustomerReservation::class, 'update'])->name('customer.reservations.update');
     Route::put('reservations/{reservation}/cancel', [CustomerReservation::class, 'cancel'])->name('customer.reservations.cancel');
 
     Route::get('rentals', [CustomerReservation::class, 'rentals'])->name('customer.rentals.index');
+    Route::get('rentals/{rental}', [CustomerRental::class, 'show'])->name('customer.rentals.show');
+    Route::put('rentals/{rental}/extend', [CustomerRental::class, 'extend'])->name('customer.rentals.extend');
+    Route::post('rentals/{rental}/rate', [CustomerRental::class, 'rate'])->name('customer.rentals.rate');
     Route::post('rentals/{rental}/pay', [CustomerPayment::class, 'store'])->name('customer.rentals.pay');
     Route::get('payments/{payment_intent}/waiting', [CustomerPayment::class, 'waiting'])->name('customer.payments.waiting');
     Route::get('payments/{payment_intent}/status', [CustomerPayment::class, 'status'])->name('customer.payments.status');
