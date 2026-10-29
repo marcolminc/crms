@@ -292,7 +292,14 @@ function initFleet() {
     }
 
     async function fetchPage(url) {
-        const response = await fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+        const headers = { 'X-Requested-With': 'XMLHttpRequest' };
+        const csrf = document.querySelector('meta[name="csrf-token"]')?.content;
+
+        if (csrf) {
+            headers['X-CSRF-TOKEN'] = csrf;
+        }
+
+        const response = await fetch(url, { headers });
 
         if (!response.ok) {
             throw new Error(`Fleet page came back ${response.status}`);
@@ -525,6 +532,271 @@ function initPhotoManager() {
 }
 
 // ---------------------------------------------------------------------------
+// Dynamic keyword search (readme: search replaces filter forms)
+// ---------------------------------------------------------------------------
+
+// Admin list pages mark their GET filter form [data-live-search]; a debounced
+// keystroke auto-submits it, so no "Apply filters" button is needed. This is
+// a plain navigation (not AJAX) on purpose: pagination and deep links keep
+// working, and without JS the form still submits normally.
+function initLiveSearch() {
+    document.querySelectorAll('form[data-live-search]').forEach((form) => {
+        const input = form.querySelector('[data-live-q]');
+        const clear = form.querySelector('[data-live-clear]');
+        const card = form.closest('.live-search-card');
+        let timer = null;
+        let last = input ? input.value : null;
+
+        function busy() {
+            if (card) {
+                card.classList.add('is-searching');
+            }
+        }
+
+        function submit() {
+            busy();
+            form.submit();
+        }
+
+        if (input) {
+            input.addEventListener('input', () => {
+                window.clearTimeout(timer);
+
+                if (clear) {
+                    clear.toggleAttribute('data-empty', input.value === '');
+                }
+
+                timer = window.setTimeout(() => {
+                    // Identical text (e.g. a stray space) is not a new search.
+                    if (input.value === last) {
+                        return;
+                    }
+                    last = input.value;
+                    submit();
+                }, 300);
+            });
+        }
+
+        if (clear) {
+            clear.addEventListener('click', () => {
+                window.clearTimeout(timer);
+
+                if (input) {
+                    input.value = '';
+                    clear.setAttribute('data-empty', '1');
+                }
+
+                // Dropping q (and any page number riding on it) shows all rows.
+                const url = new URL(window.location.href);
+                url.searchParams.delete('q');
+                url.searchParams.delete('page');
+
+                if (url.search === window.location.search) {
+                    return; // Already unfiltered; nothing to reload.
+                }
+
+                busy();
+                window.location.href = url.toString();
+            });
+        }
+
+        // Discrete controls (status selects, dates, checkboxes) apply on change.
+        form.querySelectorAll('[data-live-apply]').forEach((control) => {
+            control.addEventListener('change', () => {
+                window.clearTimeout(timer);
+                submit();
+            });
+        });
+
+        // Middle-mouse / Enter-to-open-in-new-tab would carry untrimmed text.
+        form.addEventListener('submit', () => {
+            window.clearTimeout(timer);
+
+            if (input) {
+                input.value = input.value.trim();
+            }
+        });
+    });
+}
+
+// ---------------------------------------------------------------------------
+// Password strength meter (readme: password strength)
+// ---------------------------------------------------------------------------
+
+// Mirrors the server rule (Password::defaults(): min 8, letters, numbers)
+// purely as feedback; the server stays the authority.
+function initPasswordMeters() {
+    document.querySelectorAll('[data-password-meter]').forEach((root) => {
+        const input = root.querySelector('[data-password-input]');
+        const confirm = root.querySelector('[data-password-confirm]');
+        const panel = root.querySelector('[data-meter-panel]');
+        const label = root.querySelector('[data-meter-label]');
+        const bars = {
+            1: root.querySelector('[data-meter-bar="1"]'),
+            2: root.querySelector('[data-meter-bar="2"]'),
+            3: root.querySelector('[data-meter-bar="3"]'),
+        };
+
+        if (!input || !panel) {
+            return;
+        }
+
+        panel.hidden = false;
+
+        Object.values(bars).forEach((bar) => bar.classList.add('opacity-0'));
+
+        const checks = {
+            length: (v) => v.length >= 8,
+            letters: (v) => /[A-Za-z]/.test(v),
+            numbers: (v) => /[0-9]/.test(v),
+        };
+
+        function paint() {
+            const value = input.value;
+            const touched = value !== '' || input.dataset.dirty === '1';
+
+            if (!touched) {
+                // Optional field left blank (admin edit keeps the old password).
+                panel.classList.add('opacity-50');
+            } else {
+                panel.classList.remove('opacity-50');
+            }
+
+            const met = Object.fromEntries(
+                Object.entries(checks).map(([key, test]) => [key, touched ? test(value) : false]),
+            );
+            const bonus = value.length >= 12 && (/[A-Z]/.test(value) || /[^A-Za-z0-9]/.test(value));
+            const score = Object.values(met).filter(Boolean).length + (bonus ? 1 : 0);
+
+            root.querySelectorAll('[data-check]').forEach((li) => {
+                const name = li.dataset.check;
+                const mark = li.querySelector('[data-check-mark]');
+                const ok = name === 'match'
+                    ? confirm.value !== '' && confirm.value === value
+                    : met[name];
+
+                mark.textContent = ok ? '\u2713' : '\u2022';
+                li.classList.toggle('text-emerald-700', ok);
+            });
+
+            if (confirm) {
+                const matchLi = root.querySelector('[data-check="match"]');
+                matchLi.classList.toggle('opacity-50', value === '' && confirm.value === '');
+            }
+
+            const levels = [
+                { text: 'Weak', color: 'text-rose-600' },
+                { text: 'Fair', color: 'text-amber-600' },
+                { text: 'Good', color: 'text-emerald-600' },
+                { text: 'Strong', color: 'text-emerald-600' },
+            ];
+            const shown = touched ? Math.max(1, score) : 0;
+
+            [1, 2, 3].forEach((n) => {
+                bars[n].classList.toggle('opacity-0', shown < n);
+            });
+            label.textContent = touched ? levels[shown - 1].text : '';
+            label.classList.remove('text-rose-600', 'text-amber-600', 'text-emerald-600');
+
+            if (touched) {
+                label.classList.add(levels[shown - 1].color);
+            }
+        }
+
+        [input, confirm].forEach((el) => {
+            if (!el) {
+                return;
+            }
+            el.addEventListener('input', paint);
+            el.addEventListener('blur', () => {
+                input.dataset.dirty = '1';
+                paint();
+            });
+        });
+
+        paint();
+    });
+}
+
+// ---------------------------------------------------------------------------
+// Client-side form validation (readme: validation (javascript))
+// ---------------------------------------------------------------------------
+
+// Browsers skip their built-in constraint validation on GET forms, and we
+// want the same flagging on every method: mark fields on blur, block a
+// submit while anything is invalid and jump to the first offender. The
+// server-side rules stay exactly as authoritative as they were.
+function initFormValidation() {
+    document.querySelectorAll('form').forEach((form) => {
+        const fields = () => [...form.querySelectorAll('input, select, textarea')]
+            .filter((el) => ! el.disabled)
+            .filter((el) => el.type !== 'hidden')
+            .filter((el) => el.type !== 'radio');
+
+        function messageFor(el) {
+            if (el.validity.valueMissing) return 'This field is required.';
+            if (el.validity.typeMismatch) return 'Enter a valid value of the expected type.';
+            if (el.validity.tooShort) return `Use at least ${el.minLength} characters.`;
+            if (el.validity.patternMismatch && el.pattern) return 'The format you entered is not valid.';
+
+            return el.validationMessage || 'This value is not valid.';
+        }
+
+        function mark(el) {
+            // Respect an explicit novalidate escape hatch.
+            if (form.noValidate || typeof el.checkValidity !== 'function') {
+                return true;
+            }
+
+            if (el.validity.valid) {
+                el.classList.remove('is-invalid', 'border-rose-400');
+                el.parentElement?.querySelector(`[data-invalid-for="${el.id}"]`)?.remove();
+
+                return true;
+            }
+
+            el.classList.add('is-invalid', 'border-rose-400');
+
+            if (el.id) {
+                const holder = el.closest('div');
+
+                if (holder && ! holder.querySelector(`[data-invalid-for="${el.id}"]`)) {
+                    const note = document.createElement('p');
+                    note.dataset.invalidFor = el.id;
+                    note.className = 'mt-1 text-xs text-rose-600';
+                    note.textContent = messageFor(el); // textContent, never innerHTML.
+                    holder.append(note);
+                }
+            }
+
+            return false;
+        }
+
+        form.addEventListener('blur', (event) => {
+            const el = event.target;
+
+            if (el.matches('input, select, textarea') && el.value !== '') {
+                el.dataset.dirty = '1';
+                mark(el);
+            }
+        }, true);
+
+        form.addEventListener('submit', (event) => {
+            if (event.defaultPrevented) {
+                return; // Another handler (e.g. a confirm dialog) already decided.
+            }
+
+            const invalid = fields().filter((el) => ! mark(el));
+
+            if (invalid.length > 0) {
+                event.preventDefault();
+                invalid[0].focus();
+            }
+        });
+    });
+}
+
+// ---------------------------------------------------------------------------
 
 document.addEventListener('DOMContentLoaded', () => {
     initCarousels();
@@ -532,4 +804,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initFleet();
     initFleetFilters();
     initPhotoManager();
+    initLiveSearch();
+    initPasswordMeters();
+    initFormValidation();
 });

@@ -16,8 +16,7 @@
                 <input type="hidden" name="token" value="{{ $token }}">
 
                 <x-field label="Email address" name="email" type="email" :value="$email ?? old('email')" required />
-                <x-field label="New password" name="password" type="password" required />
-                <x-field label="Confirm new password" name="password_confirmation" type="password" required />
+                <x-password label="New password" confirm-label="Confirm new password" required />
 
                 <button type="submit"
                         class="w-full rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-emerald-500">

@@ -36,20 +36,21 @@
                             <p class="mt-1 text-sm text-slate-600">{{ $alert->message }}</p>
                             <p class="mt-2 text-xs text-slate-400">{{ $alert->created_at->format('d M Y') }}</p>
 
-                            @if ($alert->link)
-                                <a href="{{ $alert->link }}" class="mt-2 inline-block text-sm font-medium text-emerald-700 hover:underline">
+                            @if ($alert->link && $alert->read_at === null)
+                                {{-- Readme: opening the details marks the alert read in one step. --}}
+                                <a href="{{ route('notifications.open', $alert) }}" class="mt-2 inline-block text-sm font-medium text-emerald-700 hover:underline">
                                     Open details
                                 </a>
                             @endif
                         </div>
 
-                        @if ($alert->read_at === null)
+                        @if ($alert->read_at === null && ! $alert->link)
                             <form method="POST" action="{{ route('notifications.read', $alert) }}">
                                 @csrf
                                 @method('PUT')
                                 <button type="submit"
                                         class="rounded-md border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50">
-                                    Mark as read
+                                    Acknowledge
                                 </button>
                             </form>
                         @endif

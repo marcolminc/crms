@@ -6,6 +6,7 @@ use App\Enums\UserRole;
 use App\Models\User;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Rules\Password;
 
 final class UpdateUserRequest extends FormRequest
 {
@@ -24,7 +25,7 @@ final class UpdateUserRequest extends FormRequest
             'email' => ['required', 'string', 'email', 'max:255', Rule::unique('users', 'email')->ignore($target->id)],
             'phone' => ['nullable', 'string', 'max:20'],
             'role' => ['required', Rule::enum(UserRole::class)],
-            'password' => ['nullable', 'string', 'confirmed', 'min:8'],
+            'password' => ['nullable', 'confirmed', Password::defaults()],
             'is_active' => ['nullable', 'boolean'],
         ];
 

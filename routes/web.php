@@ -98,6 +98,7 @@ Route::middleware(['auth', 'active'])->group(function () {
 
     // UC12: every actor (customers, staff and drivers) receives notifications.
     Route::get('notifications', [NotificationController::class, 'index'])->name('notifications.index');
+    Route::get('notifications/{notification}/open', [NotificationController::class, 'open'])->name('notifications.open');
     Route::put('notifications/{notification}/read', [NotificationController::class, 'markAsRead'])->name('notifications.read');
 });
 

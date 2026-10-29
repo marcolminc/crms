@@ -2,10 +2,6 @@
 
 @section('title', 'Users')
 
-@php
-    $selectClass = 'w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-emerald-500 focus:ring-emerald-500';
-@endphp
-
 @section('content')
     <x-page-header title="System Users" description="Staff and customer accounts.">
         <x-slot:actions>
@@ -16,24 +12,11 @@
         </x-slot:actions>
     </x-page-header>
 
-    <x-card class="mb-6">
-        <form method="GET" action="{{ route('admin.users.index') }}" class="grid gap-2 sm:grid-cols-3 lg:items-end">
-            <div class="mb-4 lg:col-span-2">
-                <x-field label="Search" name="q" :value="request('q')" placeholder="Name or email" />
-            </div>
-            <div class="mb-4">
-                <label for="role" class="mb-1 block text-sm font-medium text-slate-700">Role</label>
-                <select id="role" name="role" class="{{ $selectClass }}">
-                    <option value="">All roles</option>
-                    @foreach ($roles as $value => $label)
-                        <option value="{{ $value }}" @selected(request('role') === $value)>{{ $label }}</option>
-                    @endforeach
-                </select>
-            </div>
-            <div class="sm:col-span-3">
-                <button type="submit" class="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">Apply filters</button>
-                <a href="{{ route('admin.users.index') }}" class="ml-2 text-sm text-slate-500 hover:text-slate-800">Reset</a>
-            </div>
+    {{-- Readme: dynamic keyword search replaced the old search + role filter
+         form; app.js submits as the visitor types, × clears. --}}
+    <x-card class="live-search-card mb-6">
+        <form method="GET" action="{{ route('admin.users.index') }}" data-live-search>
+            <x-search-box name="q" :value="request('q')" placeholder="Name, email or phone" />
         </form>
     </x-card>
 

@@ -10,15 +10,9 @@
         </x-slot:actions>
     </x-page-header>
 
-    <x-card class="mb-6">
-        <form method="GET" action="{{ route('admin.customers.index') }}" class="grid gap-2 sm:grid-cols-2 lg:items-end">
-            <div>
-                <x-field label="Search" name="q" :value="request('q')" placeholder="Name, email, phone or national ID" />
-            </div>
-            <div class="mb-4">
-                <button type="submit" class="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">Apply filters</button>
-                <a href="{{ route('admin.customers.index') }}" class="ml-2 text-sm text-slate-500 hover:text-slate-800">Reset</a>
-            </div>
+    <x-card class="live-search-card mb-6">
+        <form method="GET" action="{{ route('admin.customers.index') }}" data-live-search>
+            <x-search-box name="q" :value="request('q')" placeholder="Name, email, phone or national ID" />
         </form>
     </x-card>
 

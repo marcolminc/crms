@@ -76,4 +76,54 @@
     .js [data-reveal].revealed {
         animation: none;
     }
+
+    .live-search-card.is-searching::after {
+        animation: none;
+    }
 }
+
+/*
+ * Dynamic search cards (readme: search replaces filter forms). The card is
+ * marked .live-search-card in markup; app.js adds .is-searching right before
+ * the auto-submit navigation so the reader sees the list is refreshing.
+ */
+.live-search-card {
+    position: relative;
+    transition: opacity 0.15s ease;
+}
+
+.live-search-card.is-searching {
+    opacity: 0.55;
+    pointer-events: none;
+}
+
+.live-search-card.is-searching::after {
+    content: '';
+    position: absolute;
+    top: 0.9rem;
+    right: 0.9rem;
+    width: 1rem;
+    height: 1rem;
+    border-radius: 9999px;
+    border: 2px solid rgb(16 185 129 / 0.35);
+    border-top-color: #059669;
+    animation: live-search-spin 0.7s linear infinite;
+}
+
+@keyframes live-search-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* The in-field clear button only shows while the box has text (JS keeps the
+   data-empty flag in sync; server markup sets it for an empty request). */
+[data-live-clear][data-empty] {
+    visibility: hidden;
+}
+
+/* Client-side validation flags (mirrors the server's rose error text). */
+.is-invalid {
+    border-color: rgb(251 113 133) !important;
+}
+

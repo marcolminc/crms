@@ -16,14 +16,12 @@
         </x-slot:actions>
     </x-page-header>
 
-    <x-card class="mb-6">
-        <form method="GET" action="{{ route('admin.audit-log.index') }}" class="grid gap-2 sm:grid-cols-2 lg:grid-cols-4 lg:items-end">
-            <div class="mb-4 lg:col-span-2">
-                <x-field label="Search" name="q" :value="request('q')" placeholder="Description or IP address" />
-            </div>
+    <x-card class="live-search-card mb-6">
+        <form method="GET" action="{{ route('admin.audit-log.index') }}" class="grid gap-x-4 sm:grid-cols-2 lg:grid-cols-4" data-live-search>
+            <x-search-box class="lg:col-span-2" name="q" :value="request('q')" placeholder="Description or IP address" />
             <div class="mb-4">
                 <label for="action" class="mb-1 block text-sm font-medium text-slate-700">Action</label>
-                <select id="action" name="action" class="{{ $selectClass }}">
+                <select id="action" name="action" class="{{ $selectClass }}" data-live-apply>
                     <option value="">All actions</option>
                     @foreach ($actions as $action)
                         <option value="{{ $action }}" @selected(request('action') === $action)>{{ $action }}</option>
@@ -32,7 +30,7 @@
             </div>
             <div class="mb-4">
                 <label for="user" class="mb-1 block text-sm font-medium text-slate-700">Actor</label>
-                <select id="user" name="user" class="{{ $selectClass }}">
+                <select id="user" name="user" class="{{ $selectClass }}" data-live-apply>
                     <option value="">Any actor</option>
                     @foreach ($users as $u)
                         <option value="{{ $u->id }}" @selected((string) request('user') === (string) $u->id)>{{ $u->name }}</option>
@@ -40,14 +38,14 @@
                 </select>
             </div>
             <div class="mb-4">
-                <x-field label="From" type="date" name="from" :value="request('from')" />
+                <label for="from" class="mb-1 block text-sm font-medium text-slate-700">From</label>
+                <input type="date" id="from" name="from" value="{{ request('from') }}" data-live-apply
+                       class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-emerald-500 focus:ring-emerald-500">
             </div>
             <div class="mb-4">
-                <x-field label="To" type="date" name="to" :value="request('to')" />
-            </div>
-            <div class="mb-4 sm:col-span-2">
-                <button type="submit" class="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">Apply filters</button>
-                <a href="{{ route('admin.audit-log.index') }}" class="ml-2 text-sm text-slate-500 hover:text-slate-800">Reset</a>
+                <label for="to" class="mb-1 block text-sm font-medium text-slate-700">To</label>
+                <input type="date" id="to" name="to" value="{{ request('to') }}" data-live-apply
+                       class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-emerald-500 focus:ring-emerald-500">
             </div>
         </form>
     </x-card>

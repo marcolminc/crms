@@ -20,31 +20,33 @@
         <x-stat label="Outstanding" :value="number_format($outstanding, 0).' TZS'" />
     </div>
 
-    <x-card class="mb-6">
-        <form method="GET" action="{{ route('admin.rentals.index') }}" class="grid gap-2 sm:grid-cols-2 lg:grid-cols-6 lg:items-end">
-            <div class="lg:col-span-2">
-                <x-field label="Search" name="q" :value="request('q')" placeholder="Customer or plate" />
-            </div>
+    <x-card class="live-search-card mb-6">
+        <form method="GET" action="{{ route('admin.rentals.index') }}" class="grid gap-x-4 sm:grid-cols-2 lg:grid-cols-6" data-live-search>
+            <x-search-box class="lg:col-span-2" name="q" :value="request('q')" placeholder="Customer or plate" />
             <div class="mb-4">
                 <label for="status" class="mb-1 block text-sm font-medium text-slate-700">Status</label>
-                <select id="status" name="status" class="{{ $selectClass }}">
+                <select id="status" name="status" class="{{ $selectClass }}" data-live-apply>
                     <option value="">All statuses</option>
                     @foreach ($statuses as $value => $label)
                         <option value="{{ $value }}" @selected(request('status') === $value)>{{ $label }}</option>
                     @endforeach
                 </select>
             </div>
-            <x-field label="From" name="from" type="date" :value="request('from')" />
-            <x-field label="To" name="to" type="date" :value="request('to')" />
             <div class="mb-4">
+                <label for="from" class="mb-1 block text-sm font-medium text-slate-700">From</label>
+                <input type="date" id="from" name="from" value="{{ request('from') }}" data-live-apply
+                       class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-emerald-500 focus:ring-emerald-500">
+            </div>
+            <div class="mb-4">
+                <label for="to" class="mb-1 block text-sm font-medium text-slate-700">To</label>
+                <input type="date" id="to" name="to" value="{{ request('to') }}" data-live-apply
+                       class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-emerald-500 focus:ring-emerald-500">
+            </div>
+            <div class="mb-4 flex items-center lg:pb-2">
                 <label class="flex items-center gap-2 text-sm font-medium text-slate-700">
-                    <input type="checkbox" name="overdue" value="1" @checked(request('overdue')) class="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500">
+                    <input type="checkbox" name="overdue" value="1" @checked(request('overdue')) data-live-apply class="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500">
                     Overdue only
                 </label>
-            </div>
-            <div class="sm:col-span-2 lg:col-span-6">
-                <button type="submit" class="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">Apply filters</button>
-                <a href="{{ route('admin.rentals.index') }}" class="ml-2 text-sm text-slate-500 hover:text-slate-800">Reset</a>
             </div>
         </form>
     </x-card>

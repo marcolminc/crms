@@ -50,8 +50,7 @@
             @method('PUT')
 
             <x-field label="Current password" name="current_password" type="password" required />
-            <x-field label="New password" name="password" type="password" required />
-            <x-field label="Confirm new password" name="password_confirmation" type="password" required />
+            <x-password label="New password" confirm-label="Confirm new password" required />
 
             <button type="submit"
                     class="rounded-lg border border-emerald-600 px-4 py-2 text-sm font-semibold text-emerald-700 hover:bg-emerald-50">

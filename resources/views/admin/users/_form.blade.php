@@ -27,8 +27,11 @@
         @endif
     </div>
 
-    <x-field label="Password{{ $user ? ' (leave blank to keep current)' : '' }}" name="password" type="password" :required="! $user" />
-    <x-field label="Confirm Password" name="password_confirmation" type="password" :required="! $user" />
+    <x-password class="sm:col-span-2"
+                :label="$user ? 'Password (leave blank to keep current)' : 'Password'"
+                confirm-label="Confirm Password"
+                :required="! $user"
+                :blank-hint="$user ? 'Only fill both fields when you want to replace the password.' : null" />
 
     @if ($user && ! $isSelf)
         <div class="mb-4 sm:col-span-2">

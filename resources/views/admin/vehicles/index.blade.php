@@ -22,14 +22,12 @@
         @endforeach
     </div>
 
-    <x-card class="mb-6">
-        <form method="GET" action="{{ route('admin.vehicles.index') }}" class="grid gap-2 sm:grid-cols-2 lg:grid-cols-6 lg:items-end">
-            <div class="lg:col-span-2">
-                <x-field label="Search" name="q" :value="request('q')" placeholder="Plate, make or model" />
-            </div>
+    <x-card class="live-search-card mb-6">
+        <form method="GET" action="{{ route('admin.vehicles.index') }}" class="grid gap-x-4 sm:grid-cols-2 lg:grid-cols-6" data-live-search>
+            <x-search-box class="lg:col-span-2" name="q" :value="request('q')" placeholder="Plate, make or model" />
             <div class="mb-4">
                 <label for="type" class="mb-1 block text-sm font-medium text-slate-700">Type</label>
-                <select id="type" name="type" class="{{ $selectClass }}">
+                <select id="type" name="type" class="{{ $selectClass }}" data-live-apply>
                     <option value="">All types</option>
                     @foreach ($types as $value => $label)
                         <option value="{{ $value }}" @selected(request('type') === $value)>{{ $label }}</option>
@@ -38,22 +36,22 @@
             </div>
             <div class="mb-4">
                 <label for="status" class="mb-1 block text-sm font-medium text-slate-700">Status</label>
-                <select id="status" name="status" class="{{ $selectClass }}">
+                <select id="status" name="status" class="{{ $selectClass }}" data-live-apply>
                     <option value="">All statuses</option>
                     @foreach ($statuses as $value => $label)
                         <option value="{{ $value }}" @selected(request('status') === $value)>{{ $label }}</option>
                     @endforeach
                 </select>
             </div>
-            <div>
-                <x-field label="Min rate" name="min_rate" type="number" :value="request('min_rate')" />
+            <div class="mb-4">
+                <label for="min_rate" class="mb-1 block text-sm font-medium text-slate-700">Min rate</label>
+                <input type="number" id="min_rate" name="min_rate" value="{{ request('min_rate') }}" data-live-apply
+                       class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-emerald-500 focus:ring-emerald-500">
             </div>
-            <div>
-                <x-field label="Max rate" name="max_rate" type="number" :value="request('max_rate')" />
-            </div>
-            <div class="sm:col-span-2 lg:col-span-6">
-                <button type="submit" class="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">Apply filters</button>
-                <a href="{{ route('admin.vehicles.index') }}" class="ml-2 text-sm text-slate-500 hover:text-slate-800">Reset</a>
+            <div class="mb-4">
+                <label for="max_rate" class="mb-1 block text-sm font-medium text-slate-700">Max rate</label>
+                <input type="number" id="max_rate" name="max_rate" value="{{ request('max_rate') }}" data-live-apply
+                       class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-emerald-500 focus:ring-emerald-500">
             </div>
         </form>
     </x-card>

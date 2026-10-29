@@ -79,19 +79,19 @@ class ProfileTest extends TestCase
         $this->actingAs($user)
             ->put(route('profile.password.update'), [
                 'current_password' => 'wrong-once',
-                'password' => 'brandnewpass',
-                'password_confirmation' => 'brandnewpass',
+                'password' => 'brandnewpass1',
+                'password_confirmation' => 'brandnewpass1',
             ])
             ->assertSessionHasErrors('current_password');
 
         $this->actingAs($user)
             ->put(route('profile.password.update'), [
                 'current_password' => 'password123',
-                'password' => 'brandnewpass',
-                'password_confirmation' => 'brandnewpass',
+                'password' => 'brandnewpass1',
+                'password_confirmation' => 'brandnewpass1',
             ])
             ->assertSessionHasNoErrors();
 
-        $this->assertTrue(Hash::check('brandnewpass', $user->fresh()->password));
+        $this->assertTrue(Hash::check('brandnewpass1', $user->fresh()->password));
     }
 }

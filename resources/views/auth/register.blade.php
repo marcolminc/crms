@@ -26,8 +26,7 @@
                 <x-field label="Full name" name="name" required />
                 <x-field label="Email address" name="email" type="email" required />
                 <x-field label="Phone number" name="phone" type="tel" required />
-                <x-field label="Password" name="password" type="password" required />
-                <x-field label="Confirm password" name="password_confirmation" type="password" required />
+                <x-password required />
 
                 <button type="submit"
                         class="w-full rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-emerald-500">

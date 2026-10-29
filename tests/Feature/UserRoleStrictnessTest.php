@@ -94,8 +94,8 @@ class UserRoleStrictnessTest extends TestCase
             'name' => 'Whiff',
             'email' => 'whiff@example.test',
             'role' => 'super_admin',
-            'password' => 'secret-password',
-            'password_confirmation' => 'secret-password',
+            'password' => 'SecretPass123',
+            'password_confirmation' => 'SecretPass123',
         ]);
 
         $response->assertSessionHasErrors('role');
@@ -110,8 +110,8 @@ class UserRoleStrictnessTest extends TestCase
             'name' => 'Nuru',
             'email' => 'nuru@example.test',
             'role' => UserRole::Finance->value,
-            'password' => 'secret-password',
-            'password_confirmation' => 'secret-password',
+            'password' => 'SecretPass123',
+            'password_confirmation' => 'SecretPass123',
         ]);
 
         $response->assertSessionHasNoErrors();
