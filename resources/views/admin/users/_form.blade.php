@@ -4,9 +4,9 @@
 @endphp
 
 <div class="grid gap-4 sm:grid-cols-2">
-    <x-field label="Full Name" name="name" :value="$user->name ?? ''" required pattern="[A-Za-z]{2,}.*" hint="Letters only — a name made up entirely of numbers is not accepted." />
+    <x-field label="Full Name" name="name" :value="$user->name ?? ''" required pattern="[A-Za-z]{2,}.*" placeholder="e.g. Ali Hamisi" />
     <x-field label="Email" name="email" type="email" :value="$user->email ?? ''" required />
-    <x-field label="Phone" name="phone" type="tel" :value="$user->phone ?? ''" placeholder="+255 7xx xxx xxx" pattern="\+?[0-9][0-9 .()\-]*[0-9]" hint="Digits only (spaces, dashes and a leading + are fine) — at least 7 digits." />
+    <x-field label="Phone" name="phone" type="tel" :value="$user->phone ?? ''" pattern="0[0-9]{9}" inputmode="numeric" maxlength="10" placeholder="e.g. 0123456789" />
 
     <div class="mb-4">
         <label for="role" class="mb-1 block text-sm font-medium text-slate-700">Role <span class="text-rose-600">*</span></label>

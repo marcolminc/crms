@@ -13,9 +13,9 @@
             <x-card title="Account">
                 <fieldset class="space-y-0">
                     <legend class="sr-only">Account details</legend>
-                    <x-field label="Full name" name="name" required :value="$user->name" pattern="[A-Za-z]{2,}.*" hint="Letters only — a name made up entirely of numbers is not accepted." />
+                    <x-field label="Full name" name="name" required :value="$user->name" pattern="[A-Za-z]{2,}.*" placeholder="e.g. Ali Hamisi" />
                     <x-field label="Email address" name="email" type="email" required :value="$user->email" />
-                    <x-field label="Phone number" name="phone" type="tel" :value="$user->phone" pattern="\+?[0-9][0-9 .()\-]*[0-9]" hint="Digits only (spaces, dashes and a leading + are fine) — at least 7 digits." />
+                    <x-field label="Phone number" name="phone" type="tel" :value="$user->phone" pattern="0[0-9]{9}" inputmode="numeric" maxlength="10" placeholder="e.g. 0123456789" />
                 </fieldset>
             </x-card>
 
@@ -30,7 +30,7 @@
                     <x-field label="City" name="city" :value="$customer?->city" />
                     <x-field label="Address" name="address" :value="$customer?->address" />
                     <x-field label="Emergency contact name" name="emergency_contact_name" :value="$customer?->emergency_contact_name" />
-                    <x-field label="Emergency contact phone" name="emergency_contact_phone" type="tel" :value="$customer?->emergency_contact_phone" pattern="\+?[0-9][0-9 .()\-]*[0-9]" hint="Digits only (spaces, dashes and a leading + are fine) — at least 7 digits." />
+                    <x-field label="Emergency contact phone" name="emergency_contact_phone" type="tel" :value="$customer?->emergency_contact_phone" pattern="0[0-9]{9}" inputmode="numeric" maxlength="10" placeholder="e.g. 0123456789" />
                 </fieldset>
             </x-card>
             @endif

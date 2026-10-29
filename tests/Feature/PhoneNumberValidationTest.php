@@ -8,9 +8,10 @@ use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Tests\TestCase;
 
 /**
- * Readme: a phone number is not a word. "afjdhgaj" used to be stored because
- * the field only checked required/string/max. App\Rules\PhoneNumber now wants
- * at least 7 digits and no letters, shared by every phone input.
+ * Readme: a phone number is a real number, not a word. App\Rules\PhoneNumber
+ * wants ten digits beginning with 0 (the +255 country code and ordinary
+ * separators are tolerated, then resolved to the local form); "afjdhgaj" and
+ * short/wrong-prefix values are refused.
  */
 class PhoneNumberValidationTest extends TestCase
 {
@@ -32,22 +33,28 @@ class PhoneNumberValidationTest extends TestCase
         $this->assertDatabaseMissing('users', ['email' => 'phoneletters@example.com']);
     }
 
-    public function test_signup_rejects_a_too_short_phone(): void
+    public function test_signup_rejects_a_phone_that_is_not_ten_digits_beginning_with_zero(): void
     {
-        $this->from('/register')
-            ->post('/register', [
-                'name' => 'Ali Hamisi',
-                'email' => 'shortphone@example.com',
-                'phone' => '12345',
-                'password' => 'passw0rd',
-                'password_confirmation' => 'passw0rd',
-            ])
-            ->assertSessionHasErrors('phone');
+        // too short, too long, and one that starts with 1 instead of 0.
+        foreach (['012345678', '01234567890', '1234567890'] as $i => $bad) {
+            $this->from('/register')
+                ->post('/register', [
+                    'name' => 'Ali Hamisi',
+                    'email' => "bad{$i}@example.com",
+                    'phone' => $bad,
+                    'password' => 'passw0rd',
+                    'password_confirmation' => 'passw0rd',
+                ])
+                ->assertSessionHasErrors('phone', "phone {$bad} should be rejected");
+
+            $this->assertDatabaseMissing('users', ['email' => "bad{$i}@example.com"]);
+        }
     }
 
-    public function test_signup_accepts_phones_in_the_common_formats(): void
+    public function test_signup_accepts_the_canonical_and_formatted_numbers(): void
     {
         $formats = [
+            '0123456789',
             '0712345678',
             '+255 712 345 678',
             '+255712345678',
@@ -115,7 +122,7 @@ class PhoneNumberValidationTest extends TestCase
         $this->actingAs($staff)->post(route('admin.customers.store'), [
             'national_id' => 'NID-2',
             'emergency_contact_name' => 'Jane',
-            'emergency_contact_phone' => '+255 712 345 678',
+            'emergency_contact_phone' => '0123456789',
         ])->assertSessionHasNoErrors();
     }
 
@@ -123,16 +130,16 @@ class PhoneNumberValidationTest extends TestCase
     {
         $this->from('/register')->get('/register')
             ->assertOk()
-            ->assertSee('pattern="\+?[0-9][0-9 .()\-]*[0-9]"', false);
+            ->assertSee('pattern="0[0-9]{9}"', false);
 
         $admin = User::factory()->admin()->create();
         $this->actingAs($admin)->get(route('admin.users.create'))
             ->assertOk()
-            ->assertSee('pattern="\+?[0-9][0-9 .()\-]*[0-9]"', false);
+            ->assertSee('pattern="0[0-9]{9}"', false);
 
         $customer = User::factory()->customer()->create();
         $this->actingAs($customer)->get(route('profile.edit'))
             ->assertOk()
-            ->assertSee('pattern="\+?[0-9][0-9 .()\-]*[0-9]"', false);
+            ->assertSee('pattern="0[0-9]{9}"', false);
     }
 }

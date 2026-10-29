@@ -98,7 +98,7 @@ class FullNameValidationTest extends TestCase
         ])->assertSessionHasErrors('name');
     }
 
-    public function test_name_screens_hint_the_letter_requirement(): void
+    public function test_name_screens_carry_the_client_pattern(): void
     {
         $this->from('/register')->get('/register')
             ->assertOk()

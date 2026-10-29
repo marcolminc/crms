@@ -29,7 +29,7 @@ class CustomerFactory extends Factory
             'city' => fake()->randomElement(self::$cities),
             'address' => fake()->streetAddress(),
             'emergency_contact_name' => fake()->name(),
-            'emergency_contact_phone' => '06'.fake()->numerify('#######'),
+            'emergency_contact_phone' => '06'.fake()->numerify('########'),
             'notes' => null,
         ];
     }
