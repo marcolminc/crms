@@ -127,3 +127,10 @@
     border-color: rgb(251 113 133) !important;
 }
 
+/* Positive counterpart so every field reacts as the reader types, not just
+   the password: once a filled field satisfies its constraints it turns
+   green, giving the same live "checked" feel across the whole form. */
+.is-valid {
+    border-color: rgb(16 185 129) !important;
+}
+

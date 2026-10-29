@@ -723,11 +723,12 @@ function initPasswordMeters() {
 // ---------------------------------------------------------------------------
 
 // Browsers only fire their built-in constraint validation on submit (and even
-// then skip it for GET forms), which feels static. We mirror it live instead:
-// a field flags the moment you pause typing, updates as you keep typing, and
-// clears the instant it becomes valid. To avoid nagging, an empty field the
-// reader has not touched yet stays quiet until blur or a submit attempt. The
-// server-side rules remain exactly as authoritative; this is guidance only.
+// then skip it for GET forms), which feels static. We mirror it live instead,
+// across every field (not just the password): each one turns green the moment
+// it is filled correctly and red the moment it is not, updating as the reader
+// keeps typing. To avoid nagging, an empty field the reader has not touched
+// yet stays quiet until blur or a submit attempt. The server-side rules remain
+// exactly as authoritative; this is guidance only.
 function initFormValidation() {
     document.querySelectorAll('form').forEach((form) => {
         const fields = () => [...form.querySelectorAll('input, select, textarea')]
@@ -750,7 +751,7 @@ function initFormValidation() {
         }
 
         function clearMark(el) {
-            el.classList.remove('is-invalid', 'border-rose-400');
+            el.classList.remove('is-invalid', 'border-rose-400', 'is-valid');
             el.parentElement?.querySelector(`[data-invalid-for="${el.id}"]`)?.remove();
         }
 
@@ -762,10 +763,15 @@ function initFormValidation() {
 
             if (el.validity.valid) {
                 clearMark(el);
+                // Positive live cue so every field visibly reacts as it is
+                // filled, not just the password (whose strength meter owns
+                // that signal). A password border would fight its own meter.
+                el.classList.toggle('is-valid', el.value !== '' && el.type !== 'password');
 
                 return true;
             }
 
+            el.classList.remove('is-valid');
             el.classList.add('is-invalid', 'border-rose-400');
 
             if (el.id) {
@@ -806,7 +812,7 @@ function initFormValidation() {
             }
 
             window.clearTimeout(timers.get(el));
-            timers.set(el, window.setTimeout(() => mark(el), 180));
+            timers.set(el, window.setTimeout(() => mark(el), 120));
         }
 
         form.addEventListener('input', (event) => live(event.target), true);
