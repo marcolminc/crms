@@ -13,7 +13,7 @@
             <x-card title="Account">
                 <fieldset class="space-y-0">
                     <legend class="sr-only">Account details</legend>
-                    <x-field label="Full name" name="name" required :value="$user->name" />
+                    <x-field label="Full name" name="name" required :value="$user->name" pattern="[A-Za-z]{2,}.*" hint="Letters only — a name made up entirely of numbers is not accepted." />
                     <x-field label="Email address" name="email" type="email" required :value="$user->email" />
                     <x-field label="Phone number" name="phone" type="tel" :value="$user->phone" />
                 </fieldset>
