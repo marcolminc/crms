@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Enums\ApprovalType;
 use App\Enums\RentalStatus;
 use App\Enums\ReservationStatus;
 use App\Enums\VehicleCondition;
@@ -11,6 +12,7 @@ use App\Http\Requests\Return\StoreReturnRequest;
 use App\Models\Rental;
 use App\Models\Reservation;
 use App\Services\AuditLogger;
+use App\Services\ChargeApprovalService;
 use App\Services\NotificationService;
 use App\Support\SlotPhotos;
 use Carbon\Carbon;
@@ -41,7 +43,7 @@ final class ReturnController extends Controller
         ]);
     }
 
-    public function store(StoreReturnRequest $request, Rental $rental, AuditLogger $audit)
+    public function store(StoreReturnRequest $request, Rental $rental, AuditLogger $audit, ChargeApprovalService $approvals)
     {
         $rental->load(['vehicle', 'customer']);
 
@@ -132,6 +134,9 @@ final class ReturnController extends Controller
                 'damage_notes' => $data['damage_notes'] ?? null,
             ],
         );
+
+        // UC14: a material damage / additional charge goes to a manager to sign off.
+        $approvals->maybeRequest($rental, ApprovalType::Damage, $extra, $data['damage_notes'] ?? null);
 
         return redirect()->route('admin.rentals.show', $rental)
             ->with('status', 'Vehicle return recorded and the rental completed.');

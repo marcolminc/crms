@@ -43,6 +43,12 @@
                 ['label' => 'Audit log', 'route' => 'admin.audit-log.index'],
             ]] + $groups;
         }
+        // UC14: branch managers (and the administrator) review escalated charges.
+        if ($user->hasRole(\App\Enums\UserRole::BranchManager, \App\Enums\UserRole::Admin)) {
+            $groups['Oversight'] = [
+                ['label' => 'Approvals', 'route' => 'admin.approvals.index'],
+            ];
+        }
     } elseif ($user?->isDriver()) {
         // The trip-log portal (UC24) is not built yet; drivers keep account tools only.
         $home = ['label' => 'Alerts', 'route' => 'notifications.index'];

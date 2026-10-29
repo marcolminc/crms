@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Enums\ApprovalType;
 use App\Enums\MaintenanceStatus;
 use App\Enums\RentalStatus;
 use App\Enums\ReservationStatus;
@@ -17,6 +18,7 @@ use App\Models\Rental;
 use App\Models\Reservation;
 use App\Models\Vehicle;
 use App\Services\AuditLogger;
+use App\Services\ChargeApprovalService;
 use App\Services\NotificationService;
 use App\Support\SlotPhotos;
 use Carbon\Carbon;
@@ -121,7 +123,7 @@ final class RentalController extends Controller
         ]);
     }
 
-    public function store(StoreRentalRequest $request, AuditLogger $audit)
+    public function store(StoreRentalRequest $request, AuditLogger $audit, ChargeApprovalService $approvals)
     {
         $data = $request->validated();
         $vehicle = Vehicle::query()->findOrFail($data['vehicle']);
@@ -182,6 +184,10 @@ final class RentalController extends Controller
             'total_amount' => (float) $rental->total_amount,
         ]);
 
+        // UC14: material discounts and surcharges are escalated to a manager.
+        $approvals->maybeRequest($rental, ApprovalType::Discount, (float) $rental->discount, $data['notes'] ?? null);
+        $approvals->maybeRequest($rental, ApprovalType::Damage, (float) $rental->additional_charges, $data['notes'] ?? null);
+
         return redirect()
             ->route('admin.rentals.show', $rental)
             ->with('status', 'Rental created and the vehicle is now on hire.');
@@ -205,7 +211,7 @@ final class RentalController extends Controller
         ]);
     }
 
-    public function update(UpdateRentalRequest $request, Rental $rental, AuditLogger $audit)
+    public function update(UpdateRentalRequest $request, Rental $rental, AuditLogger $audit, ChargeApprovalService $approvals)
     {
         $data = $request->validated();
         $start = $rental->start_date->copy()->startOfDay();
@@ -237,6 +243,14 @@ final class RentalController extends Controller
             ]);
         } else {
             $audit->log('rental.updated', 'Updated rental #'.$rental->id.'.', $rental);
+        }
+
+        // UC14: escalate the changed discount / surcharge when it is material.
+        if ($newDiscount !== $previousDiscount) {
+            $approvals->maybeRequest($rental, ApprovalType::Discount, $newDiscount, $data['notes'] ?? null);
+        }
+        if ($newCharges !== $previousCharges) {
+            $approvals->maybeRequest($rental, ApprovalType::Damage, $newCharges, $data['notes'] ?? null);
         }
 
         return redirect()->route('admin.rentals.show', $rental)->with('status', 'Rental updated.');

@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\AuditLogController;
+use App\Http\Controllers\Admin\ApprovalController;
 use App\Http\Controllers\Admin\CustomerController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\MaintenanceController;
@@ -131,6 +132,12 @@ Route::middleware(['auth', 'staff'])->prefix('admin')->name('admin.')->group(fun
 
     Route::get('reports', [ReportController::class, 'index'])->name('reports.index');
     Route::get('reports/{report}', [ReportController::class, 'show'])->name('reports.show');
+
+    // UC14: manager review of material discounts and damage charges. The
+    // controller restricts this queue to branch managers and administrators.
+    Route::get('approvals', [ApprovalController::class, 'index'])->name('approvals.index');
+    Route::put('approvals/{approval}/approve', [ApprovalController::class, 'approve'])->name('approvals.approve');
+    Route::put('approvals/{approval}/reject', [ApprovalController::class, 'reject'])->name('approvals.reject');
 
     // System administrator only.
     Route::middleware('role:admin')->group(function () {
