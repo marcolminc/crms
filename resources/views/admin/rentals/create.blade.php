@@ -75,7 +75,7 @@
                     <select id="vehicle" name="vehicle" class="{{ $selectClass }}" required>
                         <option value="">Select a vehicle</option>
                         @foreach ($vehicles as $option)
-                            <option value="{{ $option->id }}" @selected((string) old('vehicle', $selectedVehicle) === (string) $option->id)>
+                            <option value="{{ $option->id }}" data-mileage="{{ $option->mileage }}" @selected((string) old('vehicle', $selectedVehicle) === (string) $option->id)>
                                 {{ $option->plate_number }} — {{ $option->make }} {{ $option->model }}
                                 ({{ number_format($option->rate_per_day, 0) }} TZS/day)
                             </option>
@@ -109,8 +109,17 @@
                 <h3 class="mb-1 text-sm font-semibold text-slate-800">Pick-up handover record</h3>
                 <p class="mb-4 text-xs text-slate-500">Record the odometer and fuel at pick-up, and optionally photograph the vehicle from each angle.</p>
                 <div class="mb-4 grid gap-4 sm:grid-cols-2">
-                    <x-field label="Odometer at pick-up (km)" name="odometer_at_pickup" type="number" :value="old('odometer_at_pickup')" />
-                    <x-field label="Fuel at pick-up" name="fuel_at_pickup" :value="old('fuel_at_pickup')" placeholder="Full, 3/4, Half..." />
+                    <x-field label="Odometer at pick-up (km)" name="odometer_at_pickup" type="number" :value="old('odometer_at_pickup', $selectedMileage)" />
+                    <div class="mb-4">
+                        <label for="fuel_at_pickup" class="mb-1 block text-sm font-medium text-slate-700">Fuel at pick-up</label>
+                        <select id="fuel_at_pickup" name="fuel_at_pickup" class="{{ $selectClass }}">
+                            <option value="">Select a fuel level</option>
+                            @foreach (\App\Enums\FuelLevel::options() as $value => $label)
+                                <option value="{{ $value }}" @selected(old('fuel_at_pickup') === $value)>{{ $label }}</option>
+                            @endforeach
+                        </select>
+                        @error('fuel_at_pickup')<p class="mt-1 text-xs text-rose-600">{{ $message }}</p>@enderror
+                    </div>
                 </div>
                 <x-photo-slots :map="[]" :subject="null" prefix="pickup_photos" />
             </div>
@@ -124,4 +133,24 @@
             </div>
         </x-card>
     </form>
+
+    <script>
+        (function () {
+            var vehicleSelect = document.getElementById('vehicle');
+            var odometer = document.getElementById('odometer_at_pickup');
+            if (!vehicleSelect || !odometer) {
+                return;
+            }
+            var edited = false;
+            odometer.addEventListener('input', function () { edited = true; });
+            vehicleSelect.addEventListener('change', function () {
+                if (edited) {
+                    return;
+                }
+                var option = vehicleSelect.selectedOptions[0];
+                var mileage = option ? option.getAttribute('data-mileage') : null;
+                odometer.value = mileage ? mileage : '';
+            });
+        })();
+    </script>
 @endsection

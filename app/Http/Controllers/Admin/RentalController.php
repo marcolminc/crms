@@ -115,6 +115,12 @@ final class RentalController extends Controller
 
         $vehicles = $this->offerVehicles($from, $to, $reservation?->id);
 
+        // The handover odometer should open on the last reading we hold for the
+        // vehicle being hired, so the clerk only corrects it, never retypes it.
+        $selectedVehicleId = $request->integer('vehicle') ?: ($reservation?->vehicle_id);
+        $selectedMileage = $reservation?->vehicle?->mileage
+            ?? $vehicles->firstWhere('id', $selectedVehicleId)?->mileage;
+
         return view('admin.rentals.create', [
             'reservation' => $reservation,
             'customers' => Customer::query()->with('user')->get()->sortBy->display_name,
@@ -122,7 +128,8 @@ final class RentalController extends Controller
             'from' => $from ?? '',
             'to' => $to ?? '',
             'selectedCustomer' => $selectedCustomer,
-            'selectedVehicle' => $request->integer('vehicle') ?: ($reservation?->vehicle_id),
+            'selectedVehicle' => $selectedVehicleId ?: null,
+            'selectedMileage' => $selectedMileage,
         ]);
     }
 

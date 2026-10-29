@@ -175,6 +175,10 @@
            class="block rounded-xl transition hover:shadow-md">
             <x-stat label="Starting today" :value="$startingToday->count()" hint="Handover scheduled" />
         </a>
+        <a href="{{ route('admin.reservations.index', ['status' => App\Enums\ReservationStatus::Confirmed->value]) }}"
+           class="block rounded-xl transition hover:shadow-md">
+            <x-stat label="Pick-ups due" :value="$pickupsDue->count()" hint="Confirmed, not handed over" />
+        </a>
         <a href="{{ route('admin.rentals.index', ['from' => $today, 'to' => $today]) }}"
            class="block rounded-xl transition hover:shadow-md">
             <x-stat label="Due back today" :value="$dueBackToday->count()" hint="Returns to process" />
@@ -214,6 +218,39 @@
                     </tbody>
                 </table>
             </x-card>
+
+            @if ($pickupsDue->isNotEmpty())
+                <x-card title="Pick-ups due &mdash; convert to rental">
+                    <p class="mb-3 text-sm text-slate-500">Confirmed bookings ready to be handed over. Convert one to start the hire and record the pick-up handover.</p>
+                    <table class="w-full text-sm">
+                        <thead>
+                            <tr class="text-left text-xs uppercase tracking-wide text-slate-500">
+                                <th class="pb-2 pr-4">Customer</th>
+                                <th class="pb-2 pr-4">Vehicle</th>
+                                <th class="pb-2 pr-4">Pick-up</th>
+                                <th class="pb-2 pr-4">Until</th>
+                                <th class="pb-2">Convert</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100">
+                            @foreach ($pickupsDue as $due)
+                                <tr>
+                                    <td class="py-3 pr-4">{{ $due->customer?->display_name ?? '—' }}</td>
+                                    <td class="py-3 pr-4 text-slate-600">{{ $due->vehicle?->display_name ?? '—' }}</td>
+                                    <td class="py-3 pr-4 whitespace-nowrap text-slate-600">{{ $due->start_date->format('d M Y') }}</td>
+                                    <td class="py-3 pr-4 whitespace-nowrap text-slate-600">{{ $due->end_date->format('d M Y') }}</td>
+                                    <td class="py-3 whitespace-nowrap">
+                                        <a href="{{ route('admin.reservations.show', $due) }}"
+                                           class="text-sm font-medium text-slate-500 hover:underline">Open</a>
+                                        <a href="{{ route('admin.rentals.create', ['reservation' => $due->id]) }}"
+                                           class="ml-2 text-sm font-medium text-emerald-700 hover:underline">Convert to rental</a>
+                                    </td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </x-card>
+            @endif
 
             <x-card title="Rentals starting today">
                 @if ($startingToday->isEmpty())

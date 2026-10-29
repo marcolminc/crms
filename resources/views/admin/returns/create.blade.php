@@ -32,7 +32,16 @@
                     @error('condition')<p class="mt-1 text-xs text-rose-600">{{ $message }}</p>@enderror
                 </div>
 
-                <x-field label="Fuel level" name="fuel_level" :value="old('fuel_level')" placeholder="Full, 3/4, Half..." />
+                <div class="mb-4">
+                    <label for="fuel_level" class="mb-1 block text-sm font-medium text-slate-700">Fuel level</label>
+                    <select id="fuel_level" name="fuel_level" class="{{ $selectClass }}">
+                        <option value="">Select a fuel level</option>
+                        @foreach (\App\Enums\FuelLevel::options() as $value => $label)
+                            <option value="{{ $value }}" @selected(old('fuel_level') === $value)>{{ $label }}</option>
+                        @endforeach
+                    </select>
+                    @error('fuel_level')<p class="mt-1 text-xs text-rose-600">{{ $message }}</p>@enderror
+                </div>
 
                 <x-field label="Mileage at return (km)" name="mileage_at_return" type="number"
                          :value="$vehicle?->mileage" required />

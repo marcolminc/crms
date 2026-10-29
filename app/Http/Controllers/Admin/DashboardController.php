@@ -65,6 +65,17 @@ final class DashboardController extends Controller
                 ->with(['vehicle', 'customer.user'])
                 ->orderBy('end_date')
                 ->get(),
+            // Confirmed bookings waiting to be turned into a hire today (or a
+            // pick-up day that has already slipped). Mirrors the "Convert to
+            // rental" gate on the reservation screen.
+            'pickupsDue' => Reservation::query()
+                ->where('status', ReservationStatus::Confirmed)
+                ->whereDoesntHave('rental')
+                ->whereDate('start_date', '<=', $today)
+                ->whereDate('end_date', '>=', $today)
+                ->with(['vehicle', 'customer.user'])
+                ->orderBy('start_date')
+                ->get(),
             'dueBackToday' => $openRentals->filter(
                 fn (Rental $rental) => $rental->status === RentalStatus::Active && $rental->end_date->isSameDay($today)
             )->values(),

@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Rental;
 
+use App\Enums\FuelLevel;
 use App\Enums\ReservationStatus;
 use App\Enums\VehicleStatus;
 use App\Models\Maintenance;
@@ -35,7 +36,7 @@ final class StoreRentalRequest extends FormRequest
             'notes' => ['nullable', 'string', 'max:5000'],
             // Handover record: what the car looked like when it drove away.
             'odometer_at_pickup' => ['nullable', 'integer', 'min:0', 'max:99999999'],
-            'fuel_at_pickup' => ['nullable', 'string', 'max:20'],
+            'fuel_at_pickup' => ['nullable', 'string', Rule::in(array_keys(FuelLevel::options()))],
             'pickup_photos' => ['nullable', 'array'],
         ];
 

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\FuelLevel;
 use App\Enums\MaintenanceStatus;
 use App\Enums\PaymentStatus;
 use App\Enums\PaymentType;
@@ -61,6 +62,7 @@ class Rental extends Model
             'discount' => 'decimal:2',
             'total_amount' => 'decimal:2',
             'status' => RentalStatus::class,
+            'fuel_at_pickup' => FuelLevel::class,
             'return_requested_at' => 'datetime',
             'rating' => 'integer',
             'rated_at' => 'datetime',

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\FuelLevel;
 use App\Enums\VehicleCondition;
 use App\Models\Concerns\HasPhotoSlots;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -31,6 +32,7 @@ class VehicleReturn extends Model
             'returned_at' => 'datetime',
             'additional_charges' => 'decimal:2',
             'condition' => VehicleCondition::class,
+            'fuel_level' => FuelLevel::class,
             'mileage_at_return' => 'integer',
             'photos' => 'array',
         ];

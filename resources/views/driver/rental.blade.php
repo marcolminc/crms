@@ -42,7 +42,7 @@
                     <div class="grid gap-4 sm:grid-cols-2">
                         <div>
                             <label for="odometer_start" class="mb-1 block text-sm font-medium text-slate-700">Odometer at start (km)</label>
-                            <input type="number" id="odometer_start" name="odometer_start" value="{{ old('odometer_start') }}" min="0" step="1" class="{{ $inputClass }}">
+                            <input type="number" id="odometer_start" name="odometer_start" value="{{ old('odometer_start', $rental->vehicle?->mileage) }}" min="0" step="1" class="{{ $inputClass }}">
                             @error('odometer_start')<p class="mt-1 text-xs text-rose-600">{{ $message }}</p>@enderror
                         </div>
                         <div>

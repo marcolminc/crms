@@ -114,7 +114,7 @@
                             </div>
                             <div class="flex justify-between border-b border-slate-200 pb-1">
                                 <dt class="text-slate-500">Fuel</dt>
-                                <dd class="font-medium text-slate-800">{{ $rental->fuel_at_pickup ?? '—' }}</dd>
+                                <dd class="font-medium text-slate-800">{{ $rental->fuel_at_pickup?->label() ?? '—' }}</dd>
                             </div>
                         </div>
                         <x-photo-grid :rows="$rental->gallery('pickup_photos')" :subject="$rental" alt="pick-up photo" />
@@ -180,7 +180,7 @@
                         </div>
                         <div class="flex justify-between border-b border-slate-100 pb-2">
                             <dt class="text-slate-500">Fuel level</dt>
-                            <dd class="font-medium text-slate-800">{{ $return->fuel_level ?? '—' }}</dd>
+                            <dd class="font-medium text-slate-800">{{ $return->fuel_level?->label() ?? '—' }}</dd>
                         </div>
                         <div class="flex justify-between border-b border-slate-100 pb-2">
                             <dt class="text-slate-500">Mileage at return</dt>

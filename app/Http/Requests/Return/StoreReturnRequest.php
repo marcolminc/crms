@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Return;
 
+use App\Enums\FuelLevel;
 use App\Enums\VehicleCondition;
 use App\Models\Rental;
 use App\Models\Vehicle;
@@ -22,7 +23,7 @@ final class StoreReturnRequest extends FormRequest
         $rules = [
             'returned_at' => ['nullable', 'date'],
             'condition' => ['required', Rule::in(array_keys(VehicleCondition::options()))],
-            'fuel_level' => ['nullable', 'string', 'max:20'],
+            'fuel_level' => ['nullable', 'string', Rule::in(array_keys(FuelLevel::options()))],
             'mileage_at_return' => ['nullable', 'integer', 'min:0', 'max:99999999'],
             'damage_notes' => ['nullable', 'string', 'max:5000'],
             'additional_charges' => ['nullable', 'numeric', 'min:0', 'max:9999999999'],

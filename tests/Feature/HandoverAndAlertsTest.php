@@ -2,10 +2,13 @@
 
 namespace Tests\Feature;
 
+use App\Enums\FuelLevel;
 use App\Enums\RentalStatus;
+use App\Enums\ReservationStatus;
 use App\Models\Customer;
 use App\Models\Notification;
 use App\Models\Rental;
+use App\Models\Reservation;
 use App\Models\User;
 use App\Models\Vehicle;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
@@ -56,13 +59,13 @@ class HandoverAndAlertsTest extends TestCase
             'start_date' => now()->toDateString(),
             'end_date' => now()->addDays(2)->toDateString(),
             'odometer_at_pickup' => 40120,
-            'fuel_at_pickup' => 'Full',
+            'fuel_at_pickup' => 'full',
             'pickup_photos' => ['front' => $this->jpeg('nose.jpg'), 'back' => $this->jpeg('tail.jpg')],
         ])->assertSessionMissing('errors');
 
         $rental = Rental::query()->firstOrFail();
         $this->assertSame(40120, $rental->odometer_at_pickup);
-        $this->assertSame('Full', $rental->fuel_at_pickup);
+        $this->assertSame(FuelLevel::Full, $rental->fuel_at_pickup);
         $this->assertSame(['front', 'back'], array_keys($rental->pickup_photos));
         Storage::disk('public')->assertExists($rental->pickup_photos['front']);
 
@@ -72,7 +75,23 @@ class HandoverAndAlertsTest extends TestCase
         $this->actingAs($staff)->get(route('admin.rentals.show', $rental))
             ->assertOk()
             ->assertSee('Pick-up handover')
-            ->assertSee('40,120 km');
+            ->assertSee('40,120 km')
+            ->assertSee('Full');
+    }
+
+    public function test_an_out_of_range_fuel_level_is_refused(): void
+    {
+        $staff = $this->desk();
+        $customer = $this->customer();
+        $vehicle = Vehicle::factory()->available()->create(['mileage' => 10000]);
+
+        $this->actingAs($staff)->post('/admin/rentals', [
+            'customer' => $customer->id,
+            'vehicle' => $vehicle->id,
+            'start_date' => now()->toDateString(),
+            'end_date' => now()->addDays(2)->toDateString(),
+            'fuel_at_pickup' => 'nearly full',
+        ])->assertSessionHasErrors('fuel_at_pickup');
     }
 
     public function test_pickup_odometer_below_the_vehicle_mileage_is_rejected(): void
@@ -237,5 +256,41 @@ class HandoverAndAlertsTest extends TestCase
             ->assertSee('Due back today')
             ->assertSee($rental->vehicle->plate_number)
             ->assertDontSee('Administration overview');
+    }
+
+    // ----------------------------------------------------------------
+    // Pick-ups due: confirmed bookings ready to convert on their start day
+    // ----------------------------------------------------------------
+
+    public function test_desk_dashboard_surfaces_pickups_due_for_conversion(): void
+    {
+        $agent = User::factory()->counterAgent()->create();
+        $vehicle = Vehicle::factory()->available()->create();
+        $reservation = Reservation::factory()->confirmed()->create([
+            'vehicle_id' => $vehicle->id,
+            'status' => ReservationStatus::Confirmed,
+            'start_date' => now()->toDateString(),
+            'end_date' => now()->addDays(2)->toDateString(),
+        ]);
+
+        $this->actingAs($agent)->get('/admin')
+            ->assertOk()
+            ->assertSee('Pick-ups due')
+            ->assertSee('Convert to rental')
+            ->assertSee($reservation->customer->display_name);
+    }
+
+    public function test_pickups_due_excludes_bookings_that_have_not_started_yet(): void
+    {
+        User::factory()->counterAgent()->create();
+        Reservation::factory()->create([
+            'status' => ReservationStatus::Confirmed,
+            'start_date' => now()->addDays(5)->toDateString(),
+            'end_date' => now()->addDays(7)->toDateString(),
+        ]);
+
+        $this->actingAs(User::factory()->counterAgent()->create())->get('/admin')
+            ->assertOk()
+            ->assertDontSee('Convert to rental');
     }
 }
