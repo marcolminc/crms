@@ -24,6 +24,7 @@ final class RentalController extends Controller
             'vehicle',
             'reservation',
             'payments',
+            'driver',
             'vehicleReturn.vehicle',
             'vehicleReturn.processedBy',
             'fines.vehicle',
@@ -103,6 +104,43 @@ final class RentalController extends Controller
         $audit->log('rental.rated', 'Rental #'.$rental->id.' rated '.$rental->rating.'/5 by the customer.', $rental);
 
         return back()->with('status', 'Thank you for rating your rental.');
+    }
+
+    /**
+     * UC09 (customer side): the driver tells us the car has been dropped off.
+     * This is only a signal - the desk still performs the inspection and the
+     * formal return. We record the request and nudge the hire desk to check
+     * the vehicle in.
+     */
+    public function requestReturn(Request $request, Rental $rental, NotificationService $notifications, AuditLogger $audit)
+    {
+        $this->ensureOwnership($request, $rental);
+
+        if (! $rental->canRequestReturn()) {
+            return back()->with('error', 'This rental cannot be marked as returned right now.');
+        }
+
+        $rental->update(['return_requested_at' => now()]);
+
+        $vehicleName = $rental->vehicle?->display_name ?? 'the vehicle';
+
+        $notifications->forUsers(
+            $notifications->bookingDesk(),
+            'Customer reports vehicle returned',
+            ($rental->customer?->display_name ?? 'A customer')
+                .' says they have dropped off '.$vehicleName
+                .' (rental #'.$rental->id.'. Please inspect and complete the return.',
+            route('admin.returns.create', $rental),
+            'return_requested'
+        );
+
+        $audit->log(
+            'rental.return_requested',
+            'Customer reported rental #'.$rental->id.' as returned, pending desk inspection.',
+            $rental
+        );
+
+        return back()->with('status', 'Thanks for letting us know. Our team will inspect the vehicle and confirm your return shortly.');
     }
 
     private function isExtendable(Rental $rental): bool

@@ -26,4 +26,12 @@ return [
     */
     'vat_rate' => (float) env('CRMS_VAT_RATE', 0.18),
 
+    /*
+    | FR15: the optional office driver (chauffeur) is priced as a flat charge
+    | per hire day. It is added to a reservation quote the moment the customer
+    | asks to be driven, and becomes the rental's driver_fee when a driver is
+    | actually assigned (UC23).
+    */
+    'driver_rate_per_day' => (float) env('CRMS_DRIVER_RATE_PER_DAY', 40000),
+
 ];

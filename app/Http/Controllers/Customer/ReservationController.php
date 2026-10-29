@@ -71,6 +71,7 @@ final class ReservationController extends Controller
             'selectedVehicle' => $selected,
             'from' => $from ?? '',
             'to' => $to ?? '',
+            'driverRate' => (float) config('crms.driver_rate_per_day'),
         ]);
     }
 
@@ -86,12 +87,14 @@ final class ReservationController extends Controller
         $start = Carbon::createFromFormat('Y-m-d', $request->validated('start_date'))->startOfDay();
         $end = Carbon::createFromFormat('Y-m-d', $request->validated('end_date'))->startOfDay();
         $days = (int) $start->diffInDays($end) + 1;
+        $needsDriver = $request->boolean('needs_driver');
 
         $reservation = $customer->reservations()->create([
             'vehicle_id' => $vehicle->id,
             'start_date' => $start->toDateString(),
             'end_date' => $end->toDateString(),
-            'estimated_total' => (float) $vehicle->rate_per_day * $days,
+            'estimated_total' => $this->quoteTotal($vehicle, $days, $needsDriver),
+            'needs_driver' => $needsDriver,
             'status' => ReservationStatus::Pending,
             'notes' => $request->validated('notes'),
         ]);
@@ -100,7 +103,8 @@ final class ReservationController extends Controller
             $notifications->bookingDesk(),
             'New reservation awaiting confirmation',
             $customer->display_name.' requested '.$vehicle->display_name
-                .' from '.$start->format('d M Y').' to '.$end->format('d M Y').'.',
+                .' from '.$start->format('d M Y').' to '.$end->format('d M Y')
+                .($needsDriver ? ' with an office driver.' : '.'),
             route('admin.reservations.show', $reservation),
             'reservation'
         );
@@ -182,7 +186,7 @@ final class ReservationController extends Controller
         $reservation->update([
             'start_date' => $start->toDateString(),
             'end_date' => $end->toDateString(),
-            'estimated_total' => (float) $vehicle->rate_per_day * $days,
+            'estimated_total' => $this->quoteTotal($vehicle, $days, $reservation->needs_driver),
         ]);
 
         $notifications->forUsers(
@@ -265,6 +269,21 @@ final class ReservationController extends Controller
         $customer = $request->user()->customer;
 
         abort_unless($customer && $reservation->customer_id === $customer->id, 404);
+    }
+
+    /**
+     * FR15: the quote a customer sees at booking - the hire for the period plus
+     * the flat chauffeur charge when they ask to be driven.
+     */
+    private function quoteTotal(Vehicle $vehicle, int $days, bool $needsDriver): float
+    {
+        $total = (float) $vehicle->rate_per_day * $days;
+
+        if ($needsDriver) {
+            $total += (float) config('crms.driver_rate_per_day') * $days;
+        }
+
+        return $total;
     }
 
     private function missingProfile()

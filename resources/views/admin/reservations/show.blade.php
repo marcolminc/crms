@@ -50,6 +50,12 @@
                         <dt class="text-slate-500">Duration</dt>
                         <dd class="font-medium text-slate-800">{{ $reservation->days() }} day(s)</dd>
                     </div>
+                    @if ($reservation->needs_driver)
+                        <div class="flex justify-between border-b border-slate-100 pb-2">
+                            <dt class="text-slate-500">Office driver</dt>
+                            <dd class="font-medium text-emerald-700">Requested &mdash; assign a chauffeur</dd>
+                        </div>
+                    @endif
                     <div class="flex justify-between border-b border-slate-100 pb-2">
                         <dt class="text-slate-500">Requested on</dt>
                         <dd class="font-medium text-slate-800">{{ $reservation->created_at->format('d M Y') }}</dd>

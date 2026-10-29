@@ -17,6 +17,14 @@
         </x-slot:actions>
     </x-page-header>
 
+    @if ($rental->return_requested_at && ! $return)
+        <div class="mb-6 rounded-lg border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-800">
+            <span class="font-semibold">Customer reported the vehicle returned</span> on
+            {{ $rental->return_requested_at->format('d M Y \a\t H:i') }}.
+            Please inspect the vehicle and @if ($isOpen)<a href="{{ route('admin.returns.create', $rental) }}" class="underline font-medium">record the return</a>.@else The return is already complete.@endif
+        </div>
+    @endif
+
     <div class="grid gap-6 lg:grid-cols-3">
         <div class="space-y-6 lg:col-span-2">
             <x-card title="Transaction">
@@ -45,6 +53,12 @@
                         <dt class="text-slate-500">Rate / day</dt>
                         <dd class="font-medium text-slate-800">{{ number_format($rental->rate_per_day, 0) }} TZS</dd>
                     </div>
+                    @if ($rental->isChauffured())
+                        <div class="flex justify-between border-b border-slate-100 pb-2 sm:col-span-2">
+                            <dt class="text-slate-500">Chauffeur</dt>
+                            <dd class="font-medium text-slate-800">{{ $rental->driver?->name ?? 'Assigned driver' }}</dd>
+                        </div>
+                    @endif
                     @if ($rental->reservation)
                         <div class="flex justify-between border-b border-slate-100 pb-2 sm:col-span-2">
                             <dt class="text-slate-500">Source reservation</dt>
@@ -65,6 +79,12 @@
                     <p class="text-slate-500">Additional charges</p>
                     <p class="text-right text-slate-800">+{{ number_format($rental->additional_charges, 0) }} TZS</p>
                 </div>
+                @if ((float) $rental->driver_fee > 0)
+                    <div class="grid gap-2 text-sm sm:grid-cols-3">
+                        <p class="text-slate-500">Chauffeur fee</p>
+                        <p class="text-right text-slate-800">+{{ number_format($rental->driver_fee, 0) }} TZS</p>
+                    </div>
+                @endif
                 <div class="grid gap-2 text-sm sm:grid-cols-3">
                     <p class="text-slate-500">Discount</p>
                     <p class="text-right text-slate-800">-{{ number_format($rental->discount, 0) }} TZS</p>
@@ -210,6 +230,39 @@
                     </a>
                 @endif
             </x-card>
+
+            {{-- FR15 / UC23: assign or clear the office driver (chauffeur) --}}
+            @if ($canAssignDriver && $isOpen)
+                <x-card title="Office driver (chauffeur)">
+                    <form method="POST" action="{{ route('admin.rentals.assign-driver', $rental) }}" class="space-y-3">
+                        @csrf
+                        @method('PUT')
+                        <div>
+                            <label for="driver" class="mb-1 block text-sm font-medium text-slate-700">Driver</label>
+                            <select id="driver" name="driver"
+                                    class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-emerald-500 focus:ring-emerald-500">
+                                <option value="">No driver &mdash; self-drive</option>
+                                @foreach ($availableDrivers as $candidate)
+                                    <option value="{{ $candidate->id }}" @selected((string) old('driver') === (string) $candidate->id)>
+                                        {{ $candidate->name }}@if ($candidate->is_on_duty) &middot; on duty @endif
+                                    </option>
+                                @endforeach
+                            </select>
+                            @error('driver')<p class="mt-1 text-xs text-rose-600">{{ $message }}</p>@enderror
+                        </div>
+                        <p class="text-xs text-slate-500">Chauffeur is billed at {{ number_format($driverRate, 0) }} TZS/day &times; {{ $rental->days }} day(s). The driver and customer are notified on assignment.</p>
+                        <button type="submit"
+                                class="w-full rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700">
+                            {{ $rental->isChauffured() ? 'Update chauffeur' : 'Assign chauffeur' }}
+                        </button>
+                    </form>
+                    @if ($rental->isChauffured())
+                        <p class="mt-3 text-sm text-slate-600">Currently driving: <span class="font-medium">{{ $rental->driver?->name }}</span>
+                            &middot; fee {{ number_format($rental->driver_fee, 0) }} TZS
+                            &middot; {{ $rental->trips_count ?? $rental->trips()->count() }} trip log(s)</p>
+                    @endif
+                </x-card>
+            @endif
 
             <x-card title="Actions">
                 @if ($rental->status !== \App\Enums\RentalStatus::Cancelled)

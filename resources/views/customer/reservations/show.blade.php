@@ -41,6 +41,12 @@
                         <dt class="text-slate-500">Estimated total</dt>
                         <dd class="font-medium text-slate-800">{{ number_format($reservation->estimated_total, 0) }} TZS</dd>
                     </div>
+                    @if ($reservation->needs_driver)
+                        <div class="flex justify-between border-b border-slate-100 pb-2">
+                            <dt class="text-slate-500">Office driver</dt>
+                            <dd class="font-medium text-slate-800">Requested (chauffeur)</dd>
+                        </div>
+                    @endif
                     <div class="flex justify-between border-b border-slate-100 pb-2">
                         <dt class="text-slate-500">Pick-up date</dt>
                         <dd class="font-medium text-slate-800">{{ $reservation->start_date->format('d M Y') }}</dd>

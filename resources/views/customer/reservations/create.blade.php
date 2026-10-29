@@ -41,6 +41,20 @@
                     <x-field label="Drop-off date" name="end_date" type="date" :value="$to" required />
                 </div>
 
+                {{-- FR15: optional office driver (chauffeur) chosen at booking --}}
+                <div class="mb-4 rounded-lg border border-slate-200 bg-slate-50/60 p-3">
+                    <label class="flex items-start gap-3">
+                        <input type="checkbox" name="needs_driver" value="1" @checked(old('needs_driver'))
+                               class="mt-0.5 h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500">
+                        <span class="text-sm text-slate-700">
+                            I would like an office driver (chauffeur) for this hire.
+                            <span class="block text-xs text-slate-500">
+                                Adds {{ number_format($driverRate, 0) }} TZS per day to your estimate. We assign an available driver before pick-up.
+                            </span>
+                        </span>
+                    </label>
+                </div>
+
                 <div class="mb-4">
                     <label for="notes" class="mb-1 block text-sm font-medium text-slate-700">Notes (optional)</label>
                     <textarea id="notes" name="notes" rows="4"
@@ -56,6 +70,7 @@
             <x-card title="Before you book">
                 <ul class="list-disc space-y-1 pl-5 text-sm text-slate-600">
                     <li>The estimated total is the daily rate multiplied by the number of days.</li>
+                    <li>Adding an office driver increases the estimate by the chauffeur's daily rate.</li>
                     <li>The drop-off date must be on or after the pick-up date.</li>
                     <li>The pick-up date cannot be in the past.</li>
                     <li>A single booking can run for up to 90 days.</li>

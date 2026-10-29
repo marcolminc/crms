@@ -24,6 +24,8 @@ use App\Http\Controllers\Customer\PaymentController as CustomerPayment;
 use App\Http\Controllers\Customer\ProfileController;
 use App\Http\Controllers\Customer\ReservationController as CustomerReservation;
 use App\Http\Controllers\Customer\RentalController as CustomerRental;
+use App\Http\Controllers\Driver\DashboardController as DriverDashboard;
+use App\Http\Controllers\Driver\RentalController as DriverRental;
 use App\Http\Controllers\VehicleBrowseController;
 use Illuminate\Support\Facades\Route;
 
@@ -67,6 +69,7 @@ Route::middleware(['auth', 'active', 'role:customer'])->group(function () {
     Route::get('rentals/{rental}', [CustomerRental::class, 'show'])->name('customer.rentals.show');
     Route::put('rentals/{rental}/extend', [CustomerRental::class, 'extend'])->name('customer.rentals.extend');
     Route::post('rentals/{rental}/rate', [CustomerRental::class, 'rate'])->name('customer.rentals.rate');
+    Route::post('rentals/{rental}/return-request', [CustomerRental::class, 'requestReturn'])->name('customer.rentals.return-request');
     Route::post('rentals/{rental}/pay', [CustomerPayment::class, 'store'])->name('customer.rentals.pay');
     Route::get('payments/{payment_intent}/waiting', [CustomerPayment::class, 'waiting'])->name('customer.payments.waiting');
     Route::get('payments/{payment_intent}/status', [CustomerPayment::class, 'status'])->name('customer.payments.status');
@@ -106,6 +109,18 @@ Route::get('vehicles/{vehicle}', [VehicleBrowseController::class, 'show'])->name
 
 /*
 |----------------------------------------------------------------------
+| Driver portal (UC24)
+|----------------------------------------------------------------------
+*/
+Route::middleware(['auth', 'active', 'role:driver'])->prefix('driver')->name('driver.')->group(function () {
+    Route::get('/', [DriverDashboard::class, 'index'])->name('dashboard');
+    Route::put('availability', [DriverDashboard::class, 'toggleAvailability'])->name('availability');
+    Route::get('rentals/{rental}', [DriverRental::class, 'show'])->name('rentals.show');
+    Route::post('rentals/{rental}/trips', [DriverRental::class, 'storeTrip'])->name('rentals.trips.store');
+});
+
+/*
+|----------------------------------------------------------------------
 | Staff area
 |----------------------------------------------------------------------
 */
@@ -127,6 +142,11 @@ Route::middleware(['auth', 'staff'])->prefix('admin')->name('admin.')->group(fun
 
     Route::resource('rentals', RentalController::class)->only(['index', 'create', 'store', 'show', 'edit', 'update']);
     Route::put('rentals/{rental}/cancel', [RentalController::class, 'cancel'])->name('rentals.cancel');
+
+    // FR15 / UC23: assigning a chauffeur is a desk decision (agent or manager).
+    Route::put('rentals/{rental}/driver', [RentalController::class, 'assignDriver'])
+        ->middleware('role:counter_agent,branch_manager,admin')
+        ->name('rentals.assign-driver');
 
     Route::get('rentals/{rental}/return', [ReturnController::class, 'create'])->name('returns.create');
     Route::post('rentals/{rental}/return', [ReturnController::class, 'store'])->name('returns.store');

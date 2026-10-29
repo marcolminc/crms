@@ -21,3 +21,16 @@ Schedule::command('payments:reconcile')
 Schedule::command('rentals:flag-overdue')
     ->dailyAt('07:30')
     ->withoutOverlapping();
+
+// UC22: forward-looking nudges. Remind about tomorrow's pick-ups and tomorrow's
+// returns once each morning; the "tomorrow" match means a booking is reminded on
+// a single day only.
+Schedule::command('rentals:send-reminders')
+    ->dailyAt('08:00')
+    ->withoutOverlapping();
+
+// UC22: expire holds. A pending reservation whose start date has passed never
+// converts, so release the vehicle and close the booking once a day.
+Schedule::command('reservations:expire-holds')
+    ->dailyAt('01:00')
+    ->withoutOverlapping();

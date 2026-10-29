@@ -20,6 +20,7 @@ class Reservation extends Model
         'start_date',
         'end_date',
         'estimated_total',
+        'needs_driver',
         'status',
         'notes',
         'rejection_reason',
@@ -34,6 +35,7 @@ class Reservation extends Model
             'end_date' => 'date',
             'confirmed_at' => 'datetime',
             'estimated_total' => 'decimal:2',
+            'needs_driver' => 'boolean',
             'status' => ReservationStatus::class,
         ];
     }

@@ -47,6 +47,12 @@
                         <dt class="text-slate-500">Daily rate</dt>
                         <dd class="font-medium text-slate-800">{{ number_format($rental->rate_per_day, 0) }} TZS</dd>
                     </div>
+                    @if ($rental->isChauffured())
+                        <div class="flex justify-between border-b border-slate-100 pb-2 sm:col-span-2">
+                            <dt class="text-slate-500">Your chauffeur</dt>
+                            <dd class="font-medium text-slate-800">{{ $rental->driver?->name ?? 'Assigned' }}</dd>
+                        </div>
+                    @endif
                 </dl>
 
                 <dl class="mt-4 grid gap-3 text-sm sm:grid-cols-3">
@@ -173,6 +179,27 @@
         </div>
 
         <div class="space-y-6">
+            {{-- UC09: tell us the car is back so the desk can check it in --}}
+            @if ($rental->canRequestReturn())
+                <x-card title="Returning the vehicle">
+                    <p class="mb-3 text-sm text-slate-500">Already dropped the car off? Let us know and our team will inspect it and finalise your return.</p>
+                    <form method="POST" action="{{ route('customer.rentals.return-request', $rental) }}">
+                        @csrf
+                        <button type="submit"
+                                class="w-full rounded-lg bg-sky-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-sky-700">
+                            I&rsquo;ve returned the vehicle
+                        </button>
+                    </form>
+                </x-card>
+            @elseif ($rental->return_requested_at && ! $return)
+                <x-card title="Returning the vehicle">
+                    <p class="text-sm text-sky-700">
+                        You told us on {{ $rental->return_requested_at->format('d M Y \a\t H:i') }} that the vehicle is back.
+                        Our team is on it &mdash; we&rsquo;ll confirm once the inspection is complete.
+                    </p>
+                </x-card>
+            @endif
+
             {{-- UC10: extend the hire, subject to the vehicle being free --}}
             @if ($extendable)
                 <x-card title="Extend this rental">

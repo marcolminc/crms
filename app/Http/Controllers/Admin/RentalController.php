@@ -6,9 +6,11 @@ use App\Enums\ApprovalType;
 use App\Enums\MaintenanceStatus;
 use App\Enums\RentalStatus;
 use App\Enums\ReservationStatus;
+use App\Enums\UserRole;
 use App\Enums\VehicleStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Rental\CancelRentalRequest;
+use App\Http\Requests\Rental\AssignDriverRequest;
 use App\Http\Requests\Rental\StoreRentalRequest;
 use App\Http\Requests\Rental\UpdateRentalRequest;
 use App\Models\Customer;
@@ -16,6 +18,7 @@ use App\Models\Maintenance;
 use App\Models\Payment;
 use App\Models\Rental;
 use App\Models\Reservation;
+use App\Models\User;
 use App\Models\Vehicle;
 use App\Services\AuditLogger;
 use App\Services\ChargeApprovalService;
@@ -195,10 +198,17 @@ final class RentalController extends Controller
 
     public function show(Rental $rental)
     {
-        $rental->load(['customer.user', 'vehicle', 'payments', 'vehicleReturn', 'reservation']);
+        $rental->load(['customer.user', 'vehicle', 'payments', 'vehicleReturn', 'reservation', 'driver', 'fines']);
 
         return view('admin.rentals.show', [
             'rental' => $rental,
+            'availableDrivers' => $this->availableDrivers($rental),
+            'driverRate' => (float) config('crms.driver_rate_per_day'),
+            'canAssignDriver' => auth()->user()?->hasRole(
+                \App\Enums\UserRole::CounterAgent,
+                \App\Enums\UserRole::BranchManager,
+                \App\Enums\UserRole::Admin
+            ) ?? false,
         ]);
     }
 
@@ -290,6 +300,109 @@ final class RentalController extends Controller
         $audit->log('rental.cancelled', 'Cancelled rental #'.$rental->id.'. Reason: '.$reason, $rental, ['reason' => $reason]);
 
         return redirect()->back()->with('status', 'Rental cancelled and the customer notified.');
+    }
+
+    /**
+     * UC23: attach a free chauffeur to the hire (or clear it). The driver is
+     * priced at the flat daily chauffeur rate for the length of the hire, and
+     * both the driver and the customer are told.
+     */
+    public function assignDriver(AssignDriverRequest $request, Rental $rental, AuditLogger $audit)
+    {
+        if (! in_array($rental->status, [RentalStatus::Active, RentalStatus::Overdue], true)) {
+            return back()->with('error', 'A driver can only be assigned to an active or overdue rental.');
+        }
+
+        $driverId = $request->validated('driver');
+        $driverId = $driverId === null ? null : (int) $driverId;
+
+        // Clearing the assignment.
+        if ($driverId === null) {
+            $previous = $rental->driver;
+            $rental->update(['driver_id' => null, 'driver_fee' => 0]);
+            $rental->recalculate();
+            $rental->save();
+
+            $audit->log('rental.driver_cleared', 'Removed chauffeur from rental #'.$rental->id.'.', $rental);
+
+            return back()->with('status', 'Chauffeur removed'.($previous ? ' ('.$previous->name.').' : '.'));
+        }
+
+        if ($this->driverBusyFor($rental, $driverId)) {
+            return back()->withInput()->withErrors([
+                'driver' => 'That driver is already committed to another hire over these dates.',
+            ]);
+        }
+
+        $driver = User::query()->findOrFail($driverId);
+        $rental->driver_id = $driver->id;
+        $rental->driver_fee = (float) config('crms.driver_rate_per_day') * $rental->days;
+        $rental->recalculate();
+        $rental->save();
+
+        $vehicleName = $rental->vehicle?->display_name ?? 'the vehicle';
+        $period = $rental->start_date->format('d M Y').' - '.$rental->end_date->format('d M Y');
+
+        $this->notifications->forUsers(
+            [$driver->id],
+            'You have been assigned to a hire',
+            'You are the chauffeur for '.($rental->customer?->display_name ?? 'a customer')
+                .' driving '.$vehicleName.' from '.$period.'. Please log your daily trips.',
+            route('driver.rentals.show', $rental),
+            'driver_assignment'
+        );
+
+        $this->notifications->forCustomer(
+            $rental->customer,
+            'A driver has been assigned',
+            'Our chauffeur '.$driver->name.' will drive you for '.$vehicleName
+                .' ('.$period.'). A chauffeur fee of '.number_format($rental->driver_fee, 0).' TZS has been added.',
+            route('customer.rentals.show', $rental),
+            'driver_assigned'
+        );
+
+        $audit->log(
+            'rental.driver_assigned',
+            'Assigned chauffeur '.$driver->name.' to rental #'.$rental->id.' ('.number_format($rental->driver_fee, 0).' TZS).',
+            $rental,
+            ['driver_id' => $driver->id, 'driver_fee' => (float) $rental->driver_fee]
+        );
+
+        return back()->with('status', $driver->name.' has been assigned as the chauffeur.');
+    }
+
+    /**
+     * FR15 / UC23: the drivers who are free for this hire's dates - an active
+     * chauffeur not already driving another open rental that overlaps.
+     */
+    public function availableDrivers(Rental $rental)
+    {
+        return User::query()
+            ->where('role', UserRole::Driver)
+            ->where('is_active', true)
+            ->whereNotIn('id', function ($query) use ($rental) {
+                $query->select('driver_id')
+                    ->from('rentals')
+                    ->where('id', '!=', $rental->id)
+                    ->whereNotNull('driver_id')
+                    ->whereIn('status', [RentalStatus::Active->value, RentalStatus::Overdue->value])
+                    ->where('start_date', '<=', $rental->end_date->toDateString())
+                    ->where('end_date', '>=', $rental->start_date->toDateString());
+            })
+            ->orderByDesc('is_on_duty')
+            ->orderBy('name')
+            ->get();
+    }
+
+    private function driverBusyFor(Rental $rental, int $driverId): bool
+    {
+        return Rental::query()
+            ->where('driver_id', $driverId)
+            ->whereKeyNot($rental->id)
+            ->whereIn('status', [RentalStatus::Active, RentalStatus::Overdue])
+            ->where('start_date', '<=', $rental->end_date->toDateString())
+            ->where('end_date', '>=', $rental->start_date->toDateString())
+            ->exists();
     }
 
     private function offerVehicles(?string $from, ?string $to, ?int $excludeReservationId)

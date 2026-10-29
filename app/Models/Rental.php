@@ -25,15 +25,18 @@ class Rental extends Model
         'customer_id',
         'vehicle_id',
         'staff_id',
+        'driver_id',
         'start_date',
         'end_date',
         'days',
         'rate_per_day',
         'subtotal',
         'additional_charges',
+        'driver_fee',
         'discount',
         'total_amount',
         'status',
+        'return_requested_at',
         'rating',
         'rating_comment',
         'rated_at',
@@ -54,9 +57,11 @@ class Rental extends Model
             'rate_per_day' => 'decimal:2',
             'subtotal' => 'decimal:2',
             'additional_charges' => 'decimal:2',
+            'driver_fee' => 'decimal:2',
             'discount' => 'decimal:2',
             'total_amount' => 'decimal:2',
             'status' => RentalStatus::class,
+            'return_requested_at' => 'datetime',
             'rating' => 'integer',
             'rated_at' => 'datetime',
             'odometer_at_pickup' => 'integer',
@@ -82,6 +87,16 @@ class Rental extends Model
     public function staff(): BelongsTo
     {
         return $this->belongsTo(User::class, 'staff_id');
+    }
+
+    public function driver(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'driver_id');
+    }
+
+    public function trips(): HasMany
+    {
+        return $this->hasMany(DriverTrip::class)->latest('trip_date');
     }
 
     public function payments(): HasMany
@@ -148,6 +163,26 @@ class Rental extends Model
     }
 
     /**
+     * UC09 (customer side): the driver can tell us the car is back while the
+     * hire is still open, the desk has not checked it in, and they have not
+     * already raised the request.
+     */
+    public function canRequestReturn(): bool
+    {
+        return in_array($this->status, [RentalStatus::Active, RentalStatus::Overdue], true)
+            && $this->vehicleReturn === null
+            && $this->return_requested_at === null;
+    }
+
+    /**
+     * FR15: the hire is chauffeured once a driver is attached to it.
+     */
+    public function isChauffured(): bool
+    {
+        return $this->driver_id !== null;
+    }
+
+    /**
      * UC10: whether the same vehicle can be kept for the extra days implied by
      * the proposed drop-off. Only the days beyond the current end are examined,
      * so the rental being extended never blocks itself.
@@ -194,7 +229,10 @@ class Rental extends Model
         $this->subtotal = (float) $this->rate_per_day * $this->days;
         $this->total_amount = max(
             0,
-            (float) $this->subtotal + (float) $this->additional_charges - (float) $this->discount
+            (float) $this->subtotal
+                + (float) $this->additional_charges
+                + (float) $this->driver_fee
+                - (float) $this->discount
         );
     }
 }

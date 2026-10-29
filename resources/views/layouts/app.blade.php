@@ -51,9 +51,13 @@
             ];
         }
     } elseif ($user?->isDriver()) {
-        // The trip-log portal (UC24) is not built yet; drivers keep account tools only.
-        $home = ['label' => 'Alerts', 'route' => 'notifications.index'];
-        $groups = [];
+        // UC24: the chauffeur works in the trip-log portal, not the admin screens.
+        $home = ['label' => 'Workspace', 'route' => 'driver.dashboard'];
+        $groups = [
+            'Driving' => [
+                ['label' => 'My assignments', 'route' => 'driver.dashboard'],
+            ],
+        ];
     } else {
         $home = ['label' => 'Overview', 'route' => 'customer.dashboard'];
         $groups = [
@@ -127,7 +131,7 @@
                         </div>
                     </div>
                 @endif
-                <a href="{{ $user?->isStaff() ? route('admin.dashboard') : ($user?->isDriver() ? route('notifications.index') : route('customer.dashboard')) }}"
+                <a href="{{ $user?->isStaff() ? route('admin.dashboard') : ($user?->isDriver() ? route('driver.dashboard') : route('customer.dashboard')) }}"
                    class="flex items-center gap-2.5">
                     <img src="{{ asset('logo.png') }}" alt="{{ config('app.name') }} logo"
                          class="h-11 w-auto sm:h-12">

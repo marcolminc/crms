@@ -9,6 +9,7 @@ enum ReservationStatus: string
     case Cancelled = 'cancelled';
     case Rejected = 'rejected';
     case Completed = 'completed';
+    case Expired = 'expired';
 
     public function label(): string
     {
@@ -18,6 +19,7 @@ enum ReservationStatus: string
             self::Cancelled => 'Cancelled',
             self::Rejected => 'Rejected',
             self::Completed => 'Completed',
+            self::Expired => 'Expired',
         };
     }
 

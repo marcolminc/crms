@@ -18,6 +18,7 @@ class User extends Authenticatable
         'role',
         'phone',
         'is_active',
+        'is_on_duty',
     ];
 
     protected $hidden = [
@@ -32,6 +33,7 @@ class User extends Authenticatable
             'password' => 'hashed',
             'role' => UserRole::class,
             'is_active' => 'boolean',
+            'is_on_duty' => 'boolean',
         ];
     }
 
@@ -43,6 +45,22 @@ class User extends Authenticatable
     public function notifications()
     {
         return $this->hasMany(Notification::class)->latest();
+    }
+
+    /**
+     * UC23/UC24: the rentals this account is driving, newest hire first.
+     */
+    public function assignedRentals()
+    {
+        return $this->hasMany(Rental::class, 'driver_id');
+    }
+
+    /**
+     * UC24: the daily trip logs this driver has recorded.
+     */
+    public function trips()
+    {
+        return $this->hasMany(DriverTrip::class, 'driver_id')->latest('trip_date');
     }
 
     /**

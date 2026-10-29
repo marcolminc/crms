@@ -25,6 +25,7 @@ final class StoreReservationRequest extends FormRequest
             ],
             'start_date' => ['required', 'date_format:Y-m-d'],
             'end_date' => ['required', 'date_format:Y-m-d', 'after_or_equal:start_date'],
+            'needs_driver' => ['nullable', 'boolean'],
             'notes' => ['nullable', 'string', 'max:2000'],
         ];
     }
