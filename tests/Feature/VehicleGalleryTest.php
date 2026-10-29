@@ -175,7 +175,7 @@ class VehicleGalleryTest extends TestCase
         );
     }
 
-    public function test_browse_cards_caption_their_carousel_slots(): void
+    public function test_browse_cards_show_a_front_thumbnail_with_a_gallery_cue(): void
     {
         $withPhotos = Vehicle::factory()->available()->create([
             'images' => ['front' => 'vehicles/a.jpg', 'interior' => 'vehicles/b.jpg'],
@@ -184,25 +184,30 @@ class VehicleGalleryTest extends TestCase
 
         $this->get('/vehicles')
             ->assertOk()
-            ->assertSee('data-carousel', false)
-            ->assertSee('2 photos')
+            // The rotating carousel is gone from the cards; it lives on the
+            // detail page now.
+            ->assertDontSee('data-carousel', false)
+            // The front photo is the cover, captioned, with a count cue.
+            ->assertSee('vehicles/a.jpg')
             ->assertSee('Front')
-            ->assertSee('Interior')
+            ->assertSee('2 photos')
+            ->assertDontSee('Interior')
             ->assertSee('No photos yet')
             ->assertSee($withPhotos->plate_number)
             ->assertSee($withoutPhotos->plate_number);
     }
 
-    public function test_a_single_photo_renders_without_the_auto_rotating_markup(): void
+    public function test_a_single_photo_card_is_a_plain_thumbnail(): void
     {
         Vehicle::factory()->available()->create(['image_path' => 'vehicles/legacy.jpg']);
 
         $html = $this->get('/vehicles')->assertOk()->getContent();
 
-        // The legacy free-text image still shows...
+        // The legacy free-text image still shows as the cover...
         $this->assertStringContainsString('vehicles/legacy.jpg', $html);
-        // ...but a lone photo must not be wired as a rotating carousel.
+        // ...but a lone photo carries no carousel wiring and no multi-photo cue.
         $this->assertStringNotContainsString('data-interval', $html);
+        $this->assertStringNotContainsString('data-carousel', $html);
     }
 
     public function test_detail_page_carries_the_captioned_gallery_into_the_hero(): void
