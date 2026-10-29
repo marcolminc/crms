@@ -4,6 +4,7 @@ namespace App\Http\Requests\Customer;
 
 use App\Enums\UserRole;
 use App\Models\User;
+use App\Rules\PhoneNumber;
 use Carbon\Carbon;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -32,7 +33,7 @@ final class StoreCustomerRequest extends FormRequest
             'city' => ['nullable', 'string', 'max:100'],
             'address' => ['nullable', 'string', 'max:255'],
             'emergency_contact_name' => ['nullable', 'string', 'max:255'],
-            'emergency_contact_phone' => ['nullable', 'string', 'max:20'],
+            'emergency_contact_phone' => ['nullable', 'string', 'max:20', new PhoneNumber],
             'notes' => ['nullable', 'string', 'max:5000'],
         ];
     }

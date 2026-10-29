@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use App\Rules\FullName;
+use App\Rules\PhoneNumber;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rules\Password;
 
@@ -13,7 +14,7 @@ final class RegisterRequest extends FormRequest
         return [
             'name' => ['required', 'string', 'max:255', new FullName],
             'email' => ['required', 'string', 'email', 'max:255', 'unique:users,email'],
-            'phone' => ['required', 'string', 'max:20'],
+            'phone' => ['required', 'string', 'max:20', new PhoneNumber],
             'password' => ['required', 'confirmed', Password::defaults()],
         ];
     }

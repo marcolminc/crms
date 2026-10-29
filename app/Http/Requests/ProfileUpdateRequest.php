@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use App\Rules\FullName;
+use App\Rules\PhoneNumber;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -13,7 +14,7 @@ final class ProfileUpdateRequest extends FormRequest
         return [
             'name' => ['required', 'string', 'max:255', new FullName],
             'email' => ['required', 'string', 'email', 'max:255', Rule::unique('users', 'email')->ignore($this->user()->id)],
-            'phone' => ['nullable', 'string', 'max:20'],
+            'phone' => ['nullable', 'string', 'max:20', new PhoneNumber],
             'national_id' => ['nullable', 'string', 'max:32'],
             'passport_no' => ['nullable', 'string', 'max:32'],
             'driving_license_no' => ['nullable', 'string', 'max:32'],
@@ -21,7 +22,7 @@ final class ProfileUpdateRequest extends FormRequest
             'city' => ['nullable', 'string', 'max:100'],
             'address' => ['nullable', 'string', 'max:255'],
             'emergency_contact_name' => ['nullable', 'string', 'max:255'],
-            'emergency_contact_phone' => ['nullable', 'string', 'max:20'],
+            'emergency_contact_phone' => ['nullable', 'string', 'max:20', new PhoneNumber],
         ];
     }
 

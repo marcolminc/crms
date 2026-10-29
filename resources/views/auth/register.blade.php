@@ -25,7 +25,7 @@
 
                 <x-field label="Full name" name="name" required pattern="[A-Za-z]{2,}.*" hint="Letters only — a name made up entirely of numbers is not accepted." />
                 <x-field label="Email address" name="email" type="email" required />
-                <x-field label="Phone number" name="phone" type="tel" required />
+                <x-field label="Phone number" name="phone" type="tel" required pattern="\+?[0-9][0-9 .()\-]*[0-9]" hint="Digits only (spaces, dashes and a leading + are fine) — at least 7 digits." />
                 <x-password required />
 
                 <button type="submit"

@@ -23,7 +23,7 @@
     <x-field label="City" name="city" :value="$customer?->city" />
     <x-field label="Address" name="address" :value="$customer?->address" />
     <x-field label="Emergency contact name" name="emergency_contact_name" :value="$customer?->emergency_contact_name" />
-    <x-field label="Emergency contact phone" name="emergency_contact_phone" :value="$customer?->emergency_contact_phone" />
+    <x-field label="Emergency contact phone" name="emergency_contact_phone" type="tel" :value="$customer?->emergency_contact_phone" pattern="\+?[0-9][0-9 .()\-]*[0-9]" hint="Digits only (spaces, dashes and a leading + are fine) — at least 7 digits." />
 
     <div class="mb-4 sm:col-span-2 lg:col-span-3">
         <label for="notes" class="mb-1 block text-sm font-medium text-slate-700">Notes</label>

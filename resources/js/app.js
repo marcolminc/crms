@@ -722,16 +722,23 @@ function initPasswordMeters() {
 // Client-side form validation (readme: validation (javascript))
 // ---------------------------------------------------------------------------
 
-// Browsers skip their built-in constraint validation on GET forms, and we
-// want the same flagging on every method: mark fields on blur, block a
-// submit while anything is invalid and jump to the first offender. The
-// server-side rules stay exactly as authoritative as they were.
+// Browsers only fire their built-in constraint validation on submit (and even
+// then skip it for GET forms), which feels static. We mirror it live instead:
+// a field flags the moment you pause typing, updates as you keep typing, and
+// clears the instant it becomes valid. To avoid nagging, an empty field the
+// reader has not touched yet stays quiet until blur or a submit attempt. The
+// server-side rules remain exactly as authoritative; this is guidance only.
 function initFormValidation() {
     document.querySelectorAll('form').forEach((form) => {
         const fields = () => [...form.querySelectorAll('input, select, textarea')]
             .filter((el) => ! el.disabled)
             .filter((el) => el.type !== 'hidden')
             .filter((el) => el.type !== 'radio');
+
+        let submitAttempted = false;
+        const timers = new WeakMap();
+
+        form.noValidate = true; // We render our own messages; suppress the native bubble.
 
         function messageFor(el) {
             if (el.validity.valueMissing) return 'This field is required.';
@@ -742,15 +749,19 @@ function initFormValidation() {
             return el.validationMessage || 'This value is not valid.';
         }
 
+        function clearMark(el) {
+            el.classList.remove('is-invalid', 'border-rose-400');
+            el.parentElement?.querySelector(`[data-invalid-for="${el.id}"]`)?.remove();
+        }
+
         function mark(el) {
-            // Respect an explicit novalidate escape hatch.
-            if (form.noValidate || typeof el.checkValidity !== 'function') {
+            // Respect an explicit novalidate escape hatch on a nested form.
+            if (typeof el.checkValidity !== 'function') {
                 return true;
             }
 
             if (el.validity.valid) {
-                el.classList.remove('is-invalid', 'border-rose-400');
-                el.parentElement?.querySelector(`[data-invalid-for="${el.id}"]`)?.remove();
+                clearMark(el);
 
                 return true;
             }
@@ -766,17 +777,49 @@ function initFormValidation() {
                     note.className = 'mt-1 text-xs text-rose-600';
                     note.textContent = messageFor(el); // textContent, never innerHTML.
                     holder.append(note);
+                } else if (holder) {
+                    const note = holder.querySelector(`[data-invalid-for="${el.id}"]`);
+                    const text = messageFor(el);
+
+                    if (note && note.textContent !== text) {
+                        note.textContent = text; // Keep the wording fresh as they type.
+                    }
                 }
             }
 
             return false;
         }
 
+        // Live check while typing, settled by a short debounce so a fast burst
+        // of keystrokes doesn't flicker half-typed "errors" (e.g. "0" in a
+        // phone field before the second digit lands).
+        function live(el) {
+            if (! el.matches('input, select, textarea')) {
+                return;
+            }
+
+            // Quiet on an untouched empty field: nothing was wrong yet, just empty.
+            if (el.value === '' && el.dataset.dirty !== '1' && ! submitAttempted) {
+                clearMark(el);
+
+                return;
+            }
+
+            window.clearTimeout(timers.get(el));
+            timers.set(el, window.setTimeout(() => mark(el), 180));
+        }
+
+        form.addEventListener('input', (event) => live(event.target), true);
+        form.addEventListener('change', (event) => live(event.target), true);
+
         form.addEventListener('blur', (event) => {
             const el = event.target;
 
-            if (el.matches('input, select, textarea') && el.value !== '') {
-                el.dataset.dirty = '1';
+            if (el.matches('input, select, textarea')) {
+                if (el.value !== '') {
+                    el.dataset.dirty = '1';
+                }
+                window.clearTimeout(timers.get(el));
                 mark(el);
             }
         }, true);
@@ -786,6 +829,7 @@ function initFormValidation() {
                 return; // Another handler (e.g. a confirm dialog) already decided.
             }
 
+            submitAttempted = true;
             const invalid = fields().filter((el) => ! mark(el));
 
             if (invalid.length > 0) {

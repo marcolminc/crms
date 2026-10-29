@@ -15,7 +15,7 @@
                     <legend class="sr-only">Account details</legend>
                     <x-field label="Full name" name="name" required :value="$user->name" pattern="[A-Za-z]{2,}.*" hint="Letters only — a name made up entirely of numbers is not accepted." />
                     <x-field label="Email address" name="email" type="email" required :value="$user->email" />
-                    <x-field label="Phone number" name="phone" type="tel" :value="$user->phone" />
+                    <x-field label="Phone number" name="phone" type="tel" :value="$user->phone" pattern="\+?[0-9][0-9 .()\-]*[0-9]" hint="Digits only (spaces, dashes and a leading + are fine) — at least 7 digits." />
                 </fieldset>
             </x-card>
 
@@ -30,7 +30,7 @@
                     <x-field label="City" name="city" :value="$customer?->city" />
                     <x-field label="Address" name="address" :value="$customer?->address" />
                     <x-field label="Emergency contact name" name="emergency_contact_name" :value="$customer?->emergency_contact_name" />
-                    <x-field label="Emergency contact phone" name="emergency_contact_phone" type="tel" :value="$customer?->emergency_contact_phone" />
+                    <x-field label="Emergency contact phone" name="emergency_contact_phone" type="tel" :value="$customer?->emergency_contact_phone" pattern="\+?[0-9][0-9 .()\-]*[0-9]" hint="Digits only (spaces, dashes and a leading + are fine) — at least 7 digits." />
                 </fieldset>
             </x-card>
             @endif
