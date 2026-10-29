@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Enums\FineStatus;
 use App\Enums\MaintenanceStatus;
 use App\Enums\PaymentMethod;
 use App\Enums\PaymentStatus;
@@ -15,6 +16,7 @@ use App\Models\Maintenance;
 use App\Models\Payment;
 use App\Models\Rental;
 use App\Models\Reservation;
+use App\Models\TrafficFine;
 use App\Models\User;
 use App\Models\Vehicle;
 use App\Models\VehicleReturn;
@@ -36,6 +38,11 @@ final class ReportController extends Controller
                 ['key' => 'customers', 'label' => 'Customers', 'description' => 'Accounts registered in the period with how many hires each one has.'],
                 ['key' => 'returns', 'label' => 'Vehicle returns', 'description' => 'Returns processed in the period with condition counts and damage charges.'],
                 ['key' => 'maintenance', 'label' => 'Maintenance', 'description' => 'Workshop jobs in the period with cost totals for each vehicle.'],
+                ['key' => 'revenue', 'label' => 'Revenue', 'description' => 'Hire revenue billed, collected and outstanding in the period, grouped by month and payment method.'],
+                ['key' => 'utilization', 'label' => 'Fleet utilization', 'description' => 'Days each vehicle spent on hire in the period and the revenue it earned.'],
+                ['key' => 'tax', 'label' => 'Tax (VAT)', 'description' => 'VAT-inclusive hire revenue split into net and output tax for the period.'],
+                ['key' => 'overdue', 'label' => 'Overdue rentals', 'description' => 'Hires past their drop-off date and still open, with days overdue and balance outstanding.'],
+                ['key' => 'fines', 'label' => 'Traffic fines', 'description' => 'Fines recorded in the period with liability split between billed and absorbed.'],
             ],
         ]);
     }
@@ -52,6 +59,11 @@ final class ReportController extends Controller
             'customers' => $this->customersReport(...$range),
             'returns' => $this->returnsReport(...$range),
             'maintenance' => $this->maintenanceReport(...$range),
+            'revenue' => $this->revenueReport(...$range),
+            'utilization' => $this->utilizationReport(...$range),
+            'tax' => $this->taxReport(...$range),
+            'overdue' => $this->overdueReport(...$range),
+            'fines' => $this->finesReport(...$range),
             default => null,
         };
 
@@ -467,6 +479,357 @@ final class ReportController extends Controller
             ])->values()->all(),
             'summary' => $summary,
         ];
+    }
+
+    /**
+     * FR13: revenue billed, collected and outstanding per month in the period,
+     * with the money already banked broken down by payment method.
+     *
+     * @return array{title: string, columns: array<string, string>, rows: array<int, array<string, mixed>>, summary: array<string, mixed>}
+     */
+    private function revenueReport(Carbon $from, Carbon $to): array
+    {
+        $rentals = Rental::query()
+            ->whereBetween('start_date', [$from, $to])
+            ->where('status', '!=', RentalStatus::Cancelled->value)
+            ->get(['id', 'start_date', 'total_amount']);
+
+        $payments = Payment::query()
+            ->where(function ($query) use ($from, $to) {
+                $query->whereBetween('paid_at', [$from, $to])
+                    ->orWhere(function ($inner) use ($from, $to) {
+                        $inner->whereNull('paid_at')->whereBetween('created_at', [$from, $to]);
+                    });
+            })
+            ->get(['amount', 'payment_method', 'status', 'paid_at', 'created_at']);
+
+        $counted = $this->counted($payments);
+
+        // Bucket billed and collected money by calendar month across the range.
+        $months = [];
+        $cursor = $from->copy()->startOfMonth();
+        while ($cursor->lte($to)) {
+            $months[$cursor->format('Y-m')] = $cursor->format('M Y');
+            $cursor->addMonthNoOverflow();
+        }
+
+        $billedByMonth = $rentals->groupBy(fn (Rental $rental) => $rental->start_date->format('Y-m'))->map(fn ($g) => (float) $g->sum('total_amount'));
+        $collectedByMonth = $counted->groupBy(fn (Payment $p) => ($p->paid_at ?? $p->created_at)->format('Y-m'))->map(fn ($g) => (float) $g->sum('amount'));
+
+        $rows = [];
+        foreach ($months as $key => $label) {
+            $billed = (float) ($billedByMonth[$key] ?? 0);
+            $collected = (float) ($collectedByMonth[$key] ?? 0);
+            $rows[] = [
+                'month' => $label,
+                'billed' => $this->money($billed),
+                'collected' => $this->money($collected),
+                'outstanding' => $this->money(max(0, $billed - $collected)),
+            ];
+        }
+
+        $byMethod = [];
+        foreach (PaymentMethod::cases() as $method) {
+            $total = (float) $counted->where('payment_method', $method)->sum('amount');
+            if ($total > 0) {
+                $byMethod[$method->label()] = $this->money($total);
+            }
+        }
+
+        $billedTotal = (float) $rentals->sum('total_amount');
+        $collectedTotal = (float) $counted->sum('amount');
+
+        return [
+            'title' => 'Revenue report',
+            'columns' => [
+                'month' => 'Month',
+                'billed' => 'Billed',
+                'collected' => 'Collected',
+                'outstanding' => 'Outstanding',
+            ],
+            'rows' => $rows,
+            'summary' => array_merge($byMethod, [
+                'Billed in range' => $this->money($billedTotal),
+                'Collected in range' => $this->money($collectedTotal),
+                'Outstanding in range' => $this->money(max(0, $billedTotal - $collectedTotal)),
+            ]),
+        ];
+    }
+
+    /**
+     * FR13: how intensively each vehicle was hired out during the period - the
+     * days on hire (clipped to the range), the resulting utilization rate and
+     * the revenue the vehicle billed.
+     *
+     * @return array{title: string, columns: array<string, string>, rows: array<int, array<string, mixed>>, summary: array<string, mixed>}
+     */
+    private function utilizationReport(Carbon $from, Carbon $to): array
+    {
+        $rentals = Rental::query()
+            ->where('status', '!=', RentalStatus::Cancelled->value)
+            ->where('start_date', '<=', $to)
+            ->where('end_date', '>=', $from)
+            ->get(['vehicle_id', 'start_date', 'end_date', 'total_amount']);
+
+        $availableDays = $from->copy()->startOfDay()->diffInDays($to->copy()->endOfDay()) + 1;
+
+        $perVehicle = $rentals->groupBy('vehicle_id')->map(fn ($group) => [
+            'hires' => $group->count(),
+            'days' => $group->sum(fn (Rental $r) => $this->overlapDays($r->start_date, $r->end_date, $from, $to)),
+            'revenue' => (float) $group->sum('total_amount'),
+        ]);
+
+        $rows = [];
+        $totalDays = 0;
+        $totalRevenue = 0.0;
+
+        foreach (Vehicle::query()->orderBy('plate_number')->get() as $vehicle) {
+            $stats = $perVehicle->get($vehicle->id);
+            if ($stats === null) {
+                continue;
+            }
+
+            $utilization = $availableDays > 0 ? round(($stats['days'] / $availableDays) * 100) : 0;
+            $totalDays += $stats['days'];
+            $totalRevenue += $stats['revenue'];
+
+            $rows[] = [
+                'vehicle' => trim($vehicle->make.' '.$vehicle->model),
+                'plate' => $vehicle->plate_number,
+                'type' => $vehicle->type->label(),
+                'hires' => $stats['hires'],
+                'days' => $stats['days'],
+                'utilization' => $utilization.'%',
+                'revenue' => $this->money($stats['revenue']),
+            ];
+        }
+
+        $fleetSize = Vehicle::query()->count();
+        $avg = $fleetSize > 0 && $availableDays > 0
+            ? round((($totalDays / $availableDays) / $fleetSize) * 100)
+            : 0;
+
+        return [
+            'title' => 'Fleet utilization report',
+            'columns' => [
+                'vehicle' => 'Vehicle',
+                'plate' => 'Plate',
+                'type' => 'Type',
+                'hires' => 'Hires',
+                'days' => 'Days on hire',
+                'utilization' => 'Utilization',
+                'revenue' => 'Revenue',
+            ],
+            'rows' => $rows,
+            'summary' => [
+                'Period days' => $availableDays,
+                'Fleet size' => $fleetSize,
+                'Vehicles hired' => $rows === [] ? 0 : count($rows),
+                'Total hire days' => $totalDays,
+                'Fleet utilization' => $avg.'%',
+                'Revenue from hire' => $this->money($totalRevenue),
+            ],
+        ];
+    }
+
+    /**
+     * FR13: split VAT-inclusive hire revenue into net and output tax for the
+     * period, at the configured rate.
+     *
+     * @return array{title: string, columns: array<string, string>, rows: array<int, array<string, mixed>>, summary: array<string, mixed>}
+     */
+    private function taxReport(Carbon $from, Carbon $to): array
+    {
+        $rate = (float) config('crms.vat_rate', 0.18);
+        $divisor = 1 + $rate;
+
+        $rentals = Rental::query()
+            ->with(['customer.user', 'vehicle'])
+            ->whereBetween('start_date', [$from, $to])
+            ->where('status', '!=', RentalStatus::Cancelled->value)
+            ->orderBy('start_date')
+            ->get();
+
+        $grossTotal = 0.0;
+
+        $rows = $rentals->map(function (Rental $rental) use ($divisor, $rate, &$grossTotal) {
+            $gross = (float) $rental->total_amount;
+            $grossTotal += $gross;
+            $net = $divisor > 0 ? $gross / $divisor : $gross;
+            $vat = $gross - $net;
+
+            return [
+                'date' => $rental->start_date->format('d M Y'),
+                'customer' => $rental->customer?->display_name ?? '—',
+                'vehicle' => $rental->vehicle?->display_name ?? '—',
+                'gross' => $this->money($gross),
+                'net' => $this->money($net),
+                'vat' => $this->money($vat),
+            ];
+        })->values()->all();
+
+        $netTotal = $divisor > 0 ? $grossTotal / $divisor : $grossTotal;
+
+        return [
+            'title' => 'Tax (VAT) report',
+            'columns' => [
+                'date' => 'Start',
+                'customer' => 'Customer',
+                'vehicle' => 'Vehicle',
+                'gross' => 'Gross',
+                'net' => 'Net',
+                'vat' => 'VAT',
+            ],
+            'rows' => $rows,
+            'summary' => [
+                'VAT rate' => round($rate * 100).'%',
+                'Taxable hires' => count($rows),
+                'Gross revenue' => $this->money($grossTotal),
+                'Net revenue' => $this->money($netTotal),
+                'Output VAT' => $this->money($grossTotal - $netTotal),
+            ],
+        ];
+    }
+
+    /**
+     * FR13: hires still open past their drop-off date, how overdue each is and
+     * what balance is outstanding.
+     *
+     * @return array{title: string, columns: array<string, string>, rows: array<int, array<string, mixed>>, summary: array<string, mixed>}
+     */
+    private function overdueReport(Carbon $from, Carbon $to): array
+    {
+        $today = Carbon::today();
+
+        $rentals = Rental::query()
+            ->with(['customer.user', 'vehicle'])
+            ->where(function ($query) use ($today) {
+                $query->where('status', RentalStatus::Overdue->value)
+                    ->orWhere(function ($inner) use ($today) {
+                        $inner->where('status', RentalStatus::Active->value)
+                            ->whereDate('end_date', '<', $today->toDateString());
+                    });
+            })
+            ->orderBy('end_date')
+            ->get();
+
+        $outstanding = 0.0;
+        $worst = 0;
+
+        $rows = $rentals->map(function (Rental $rental) use ($today, &$outstanding, &$worst) {
+            $daysOverdue = (int) round(abs($today->diffInDays($rental->end_date)));
+            $balance = $rental->balanceDue();
+            $outstanding += $balance;
+            $worst = max($worst, $daysOverdue);
+
+            return [
+                'end' => $rental->end_date->format('d M Y'),
+                'days_overdue' => $daysOverdue,
+                'customer' => $rental->customer?->display_name ?? '—',
+                'vehicle' => $rental->vehicle?->display_name ?? '—',
+                'total' => $this->money($rental->total_amount),
+                'collected' => $this->money($rental->paidAmount()),
+                'outstanding' => $this->money($balance),
+                'status' => $rental->status->label(),
+            ];
+        })->values()->all();
+
+        return [
+            'title' => 'Overdue rentals report',
+            'columns' => [
+                'end' => 'Drop-off',
+                'days_overdue' => 'Days overdue',
+                'customer' => 'Customer',
+                'vehicle' => 'Vehicle',
+                'total' => 'Total',
+                'collected' => 'Collected',
+                'outstanding' => 'Outstanding',
+                'status' => 'Status',
+            ],
+            'rows' => $rows,
+            'summary' => [
+                'Overdue rentals' => count($rows),
+                'Total outstanding' => $this->money($outstanding),
+                'Longest overdue' => $worst.' days',
+            ],
+        ];
+    }
+
+    /**
+     * UC25 support: the traffic fines recorded in the period and how liability
+     * split between customers (billed) and the company (absorbed).
+     *
+     * @return array{title: string, columns: array<string, string>, rows: array<int, array<string, mixed>>, summary: array<string, mixed>}
+     */
+    private function finesReport(Carbon $from, Carbon $to): array
+    {
+        $fines = TrafficFine::query()
+            ->with(['rental.customer.user', 'vehicle', 'decider'])
+            ->whereBetween('created_at', [$from, $to])
+            ->orderBy('created_at')
+            ->get();
+
+        $billed = 0.0;
+        $absorbed = 0.0;
+        $pending = 0;
+
+        foreach ($fines as $fine) {
+            if ($fine->status === FineStatus::Billed) {
+                $billed += (float) $fine->amount;
+            } elseif ($fine->status === FineStatus::Absorbed) {
+                $absorbed += (float) $fine->amount;
+            } else {
+                $pending++;
+            }
+        }
+
+        return [
+            'title' => 'Traffic fines report',
+            'columns' => [
+                'recorded' => 'Recorded',
+                'rental' => 'Rental',
+                'vehicle' => 'Vehicle',
+                'offence' => 'Offence',
+                'reference' => 'Reference',
+                'amount' => 'Amount',
+                'liability' => 'Liability',
+                'status' => 'Status',
+                'decided_by' => 'Decided by',
+            ],
+            'rows' => $fines->map(fn (TrafficFine $fine) => [
+                'recorded' => $fine->created_at->format('d M Y'),
+                'rental' => '#'.$fine->rental_id,
+                'vehicle' => $fine->vehicle?->display_name ?? $fine->rental?->vehicle?->display_name ?? '—',
+                'offence' => $fine->description ?? '—',
+                'reference' => $fine->reference ?? '—',
+                'amount' => $this->money($fine->amount),
+                'liability' => $fine->liability?->label() ?? 'Unassigned',
+                'status' => $fine->status->label(),
+                'decided_by' => $fine->decider?->name ?? '—',
+            ])->values()->all(),
+            'summary' => [
+                'Fines in range' => $fines->count(),
+                'Still pending' => $pending,
+                'Billed to customers' => $this->money($billed),
+                'Absorbed by company' => $this->money($absorbed),
+            ],
+        ];
+    }
+
+    /**
+     * Whole days a rental period overlaps the report range (inclusive), never
+     * negative when the hire sits outside the window.
+     */
+    private function overlapDays(Carbon $start, Carbon $end, Carbon $from, Carbon $to): int
+    {
+        $latestStart = $start->copy()->startOfDay()->max($from->copy()->startOfDay());
+        $earliestEnd = $end->copy()->startOfDay()->min($to->copy()->startOfDay());
+
+        if ($earliestEnd->lt($latestStart)) {
+            return 0;
+        }
+
+        return $latestStart->diffInDays($earliestEnd) + 1;
     }
 
     private function streamCsv(array $report): StreamedResponse

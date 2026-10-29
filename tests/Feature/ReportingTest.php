@@ -2,12 +2,14 @@
 
 namespace Tests\Feature;
 
+use App\Enums\FineStatus;
 use App\Enums\PaymentStatus;
 use App\Enums\RentalStatus;
 use App\Models\Customer;
 use App\Models\Maintenance;
 use App\Models\Rental;
 use App\Models\Reservation;
+use App\Models\TrafficFine;
 use App\Models\User;
 use App\Models\Vehicle;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
@@ -72,7 +74,11 @@ class ReportingTest extends TestCase
         ]);
         Maintenance::factory()->completed()->create(['vehicle_id' => $rental->vehicle_id]);
 
-        foreach (['fleet', 'reservations', 'rentals', 'payments', 'customers', 'returns', 'maintenance'] as $report) {
+        $expected = [
+            'fleet', 'reservations', 'rentals', 'payments', 'customers', 'returns', 'maintenance',
+            'revenue', 'utilization', 'tax', 'overdue', 'fines',
+        ];
+        foreach ($expected as $report) {
             $this->actingAs($manager)
                 ->get(route('admin.reports.show', $report))
                 ->assertOk();
@@ -145,5 +151,92 @@ class ReportingTest extends TestCase
 
         $this->actingAs($manager)->get(route('admin.customers.history', $customer))
             ->assertOk();
+    }
+
+    public function test_the_tax_report_splits_vat_inclusive_revenue_into_net_and_output_tax(): void
+    {
+        config(['crms.vat_rate' => 0.18]);
+
+        $rental = Rental::factory()->completed()->create([
+            'start_date' => now()->toDateString(),
+            'end_date' => now()->toDateString(),
+            'days' => 1,
+        ]);
+        $rental->forceFill(['total_amount' => 118000])->save();
+
+        // Gross 118,000 at 18% -> net 100,000, output VAT 18,000.
+        $this->actingAs($this->branchManager())
+            ->get(route('admin.reports.show', 'tax'))
+            ->assertOk()
+            ->assertSee('Tax (VAT) report')
+            ->assertSee('100,000')
+            ->assertSee('18,000');
+    }
+
+    public function test_the_utilization_report_counts_hire_days_clipped_to_the_period(): void
+    {
+        $vehicle = Vehicle::factory()->available()->create(['plate_number' => 'T900 UTL']);
+
+        $rental = Rental::factory()->completed()->create([
+            'vehicle_id' => $vehicle->id,
+            'start_date' => now()->toDateString(),
+            'end_date' => now()->addDays(2)->toDateString(),
+            'days' => 3,
+        ]);
+        $rental->forceFill(['total_amount' => 300000])->save();
+
+        $this->actingAs($this->branchManager())
+            ->get(route('admin.reports.show', 'utilization'))
+            ->assertOk()
+            ->assertSee('Fleet utilization report')
+            ->assertSee('T900 UTL')
+            ->assertSee('300,000');
+    }
+
+    public function test_the_overdue_report_flags_open_hires_past_their_drop_off(): void
+    {
+        $rental = Rental::factory()->create([
+            'status' => RentalStatus::Active,
+            'start_date' => now()->subDays(10)->toDateString(),
+            'end_date' => now()->subDays(4)->toDateString(),
+            'days' => 6,
+            'rate_per_day' => 100000,
+            'additional_charges' => 0,
+            'discount' => 0,
+        ]);
+        $rental->forceFill(['total_amount' => 600000])->save();
+
+        $this->actingAs($this->branchManager())
+            ->get(route('admin.reports.show', 'overdue'))
+            ->assertOk()
+            ->assertSee('Overdue rentals report')
+            ->assertSee('4 days');
+    }
+
+    public function test_the_fines_report_splits_billed_and_absorbed_liability(): void
+    {
+        $rental = Rental::factory()->completed()->create();
+
+        TrafficFine::factory()->create([
+            'rental_id' => $rental->id,
+            'vehicle_id' => $rental->vehicle_id,
+            'amount' => 50000,
+            'status' => FineStatus::Billed,
+            'created_at' => now(),
+        ]);
+        TrafficFine::factory()->create([
+            'rental_id' => $rental->id,
+            'vehicle_id' => $rental->vehicle_id,
+            'amount' => 70000,
+            'status' => FineStatus::Absorbed,
+            'created_at' => now(),
+        ]);
+
+        $this->actingAs($this->branchManager())
+            ->get(route('admin.reports.show', 'fines'))
+            ->assertOk()
+            ->assertSee('Traffic fines report')
+            ->assertSee('50,000')
+            ->assertSee('70,000');
     }
 }

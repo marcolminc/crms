@@ -19,4 +19,11 @@ return [
     */
     'approval_threshold' => (float) env('CRMS_APPROVAL_THRESHOLD', 200000),
 
+    /*
+    | FR13: VAT rate (Tanzania standard rate) applied to taxable hire revenue
+    | in the tax report. Rental totals are treated as VAT-inclusive, so the
+    | output tax carved out of a gross figure is gross * rate / (1 + rate).
+    */
+    'vat_rate' => (float) env('CRMS_VAT_RATE', 0.18),
+
 ];
