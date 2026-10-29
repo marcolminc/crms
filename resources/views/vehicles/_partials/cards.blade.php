@@ -3,15 +3,15 @@
         $window = array_filter(['from' => $filters['from'], 'to' => $filters['to']]);
         $detailUrl = route('vehicles.show', $vehicle).($window ? '?'.http_build_query($window) : '');
     @endphp
-    <article class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition duration-300 hover:-translate-y-0.5 hover:border-emerald-300 hover:shadow-md"
+    <article class="relative overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition duration-300 hover:-translate-y-0.5 hover:border-emerald-300 hover:shadow-md"
              data-reveal style="--reveal-delay: {{ ($loop->index % 3) * 90 }}ms">
         <div class="relative">
             <x-vehicle-thumbnail :vehicle="$vehicle" ratio="aspect-[16/10]" />
-            <div class="absolute left-3 top-3">
+            <div class="pointer-events-none absolute left-3 top-3">
                 <x-badge :value="$vehicle->status->value" />
             </div>
         </div>
-        <div class="relative p-5">
+        <div class="p-5">
             <h3 class="text-base font-semibold text-slate-900">
                 <a href="{{ $detailUrl }}"
                    class="after:absolute after:inset-0 after:content-[''] hover:text-emerald-700">

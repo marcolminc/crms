@@ -195,6 +195,12 @@ class VehicleGalleryTest extends TestCase
             ->assertSee('No photos yet')
             ->assertSee($withPhotos->plate_number)
             ->assertSee($withoutPhotos->plate_number);
+
+        // The whole card is a link: the article is the positioning context and
+        // the title link stretches an overlay across it (thumbnail included).
+        $html = $this->get('/vehicles')->assertOk()->getContent();
+        $this->assertStringContainsString('<article class="relative', $html);
+        $this->assertStringContainsString('after:absolute after:inset-0', $html);
     }
 
     public function test_a_single_photo_card_is_a_plain_thumbnail(): void
