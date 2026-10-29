@@ -29,6 +29,7 @@
             ],
             'Money' => [
                 ['label' => 'Payments', 'route' => 'admin.payments.index'],
+                ['label' => 'Traffic fines', 'route' => 'admin.fines.index'],
                 ['label' => 'Reports', 'route' => 'admin.reports.index'],
             ],
             'People' => [

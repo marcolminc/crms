@@ -4,6 +4,7 @@ use App\Http\Controllers\Admin\AuditLogController;
 use App\Http\Controllers\Admin\ApprovalController;
 use App\Http\Controllers\Admin\CustomerController;
 use App\Http\Controllers\Admin\DashboardController;
+use App\Http\Controllers\Admin\FineController;
 use App\Http\Controllers\Admin\MaintenanceController;
 use App\Http\Controllers\Admin\PaymentController;
 use App\Http\Controllers\Admin\RentalController;
@@ -124,6 +125,14 @@ Route::middleware(['auth', 'staff'])->prefix('admin')->name('admin.')->group(fun
 
     Route::get('rentals/{rental}/return', [ReturnController::class, 'create'])->name('returns.create');
     Route::post('rentals/{rental}/return', [ReturnController::class, 'store'])->name('returns.store');
+
+    // UC25: traffic fines and liability. The controller limits handling to
+    // agents, managers and finance.
+    Route::get('fines', [FineController::class, 'index'])->name('fines.index');
+    Route::get('rentals/{rental}/fines', [FineController::class, 'create'])->name('fines.create');
+    Route::post('rentals/{rental}/fines', [FineController::class, 'store'])->name('fines.store');
+    Route::put('fines/{fine}/bill', [FineController::class, 'bill'])->name('fines.bill');
+    Route::put('fines/{fine}/absorb', [FineController::class, 'absorb'])->name('fines.absorb');
 
     Route::get('payments', [PaymentController::class, 'index'])->name('payments.index');
     Route::get('rentals/{rental}/payment', [PaymentController::class, 'create'])->name('payments.create');

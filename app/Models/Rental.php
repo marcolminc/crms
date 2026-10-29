@@ -86,6 +86,11 @@ class Rental extends Model
         return $this->hasOne(VehicleReturn::class);
     }
 
+    public function fines(): HasMany
+    {
+        return $this->hasMany(TrafficFine::class);
+    }
+
     public function scopeOpen(Builder $query): Builder
     {
         return $query->whereIn('status', [RentalStatus::Active, RentalStatus::Overdue]);
