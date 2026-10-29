@@ -128,4 +128,45 @@ class SecurityBoundaryTest extends TestCase
         $this->assertStringContainsString("'=SUM(A1:A2)", $csv);
         $this->assertSame(1, substr_count($csv, '=SUM(A1:A2)'));
     }
+
+    public function test_authenticated_pages_send_no_store_headers_so_back_after_logout_cannot_reveal_them(): void
+    {
+        $user = User::factory()->customer()->create();
+
+        $response = $this->actingAs($user)->get(route('profile.edit'));
+
+        // Symfony reorders Cache-Control directives on output, so assert on the
+        // individual markers rather than the exact string.
+        $response->assertOk()
+            ->assertHeader('Pragma', 'no-cache')
+            ->assertHeader('Expires', '0');
+
+        $cacheControl = $response->headers->get('Cache-Control', '');
+        $this->assertStringContainsString('no-store', $cacheControl);
+        $this->assertStringContainsString('no-cache', $cacheControl);
+        $this->assertStringContainsString('must-revalidate', $cacheControl);
+    }
+
+    public function test_public_pages_are_left_cacheable(): void
+    {
+        $response = $this->get('/vehicles')->assertOk();
+
+        $this->assertStringNotContainsString('no-store', $response->headers->get('Cache-Control', '') ?? '');
+    }
+
+    public function test_a_signed_out_browser_requesting_a_protected_page_is_bounced_to_login(): void
+    {
+        $user = User::factory()->customer()->create();
+
+        $this->actingAs($user)->get(route('profile.edit'))->assertOk();
+        $this->post(route('logout'))->assertRedirect(route('home'));
+
+        // actingAs pins the user on the guard for the rest of the test, so drop
+        // the resolved guards to emulate a fresh (signed-out) browser request.
+        $this->app['auth']->forgetGuards();
+
+        // The no-store headers guarantee the Back button re-requests rather than
+        // replaying a cached page; this proves the re-request is then redirected.
+        $this->get(route('profile.edit'))->assertRedirect(route('login'));
+    }
 }

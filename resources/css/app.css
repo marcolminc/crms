@@ -47,6 +47,27 @@
     background-color: #ffffff;
 }
 
+/*
+ * Collapsible fleet filter card. It is a native <details>, so it opens and
+ * closes without JavaScript; this only hides the browser's default disclosure
+ * triangle and turns the chevron with the open state.
+ */
+[data-filter-card] > summary {
+    list-style: none;
+}
+
+[data-filter-card] > summary::-webkit-details-marker {
+    display: none;
+}
+
+[data-filter-card] > summary svg {
+    transition: transform 0.2s ease;
+}
+
+[data-filter-card][open] > summary svg {
+    transform: rotate(180deg);
+}
+
 @media (prefers-reduced-motion: reduce) {
     .js [data-reveal] {
         opacity: 1;

@@ -3,6 +3,7 @@
 use App\Http\Middleware\EnsureUserHasRole;
 use App\Http\Middleware\EnsureUserIsActive;
 use App\Http\Middleware\EnsureUserIsStaff;
+use App\Http\Middleware\PreventCacheForAuthenticatedResponses;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -25,6 +26,15 @@ return Application::configure(basePath: dirname(__DIR__))
                 | Request::HEADER_X_FORWARDED_HOST
                 | Request::HEADER_X_FORWARDED_PROTO,
         );
+
+        // UC03: authenticated pages must not survive in the browser cache, so a
+        // Back navigation after logout re-requests and hits the auth redirect.
+        // Appended to the web group (runs after the session is started) and only
+        // stamps headers when $request->user() is present, leaving public pages
+        // cacheable.
+        $middleware->web(append: [
+            PreventCacheForAuthenticatedResponses::class,
+        ]);
 
         $middleware->alias([
             'role' => EnsureUserHasRole::class,

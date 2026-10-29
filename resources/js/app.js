@@ -4,6 +4,7 @@
  *  - auto-rotating photo carousels (they only tick while on screen),
  *  - staggered scroll reveals for fleet cards,
  *  - infinite scroll layered on top of real server pagination,
+ *  - live server-side filtering of the fleet (keyword as you type),
  *  - a photo picker preview on the admin vehicle form.
  *
  * Everything degrades: without JS the classic pagination links and all cards
@@ -206,10 +207,15 @@ function initReveal(root = document) {
 }
 
 // ---------------------------------------------------------------------------
-// Infinite scroll over server pages
+// Fleet grid: infinite scroll + live server-side filtering
 // ---------------------------------------------------------------------------
 
-function initInfiniteScroll() {
+// Set by initFleet when the grid is manageable; the filter wiring checks it
+// before hijacking the form so a page without the controller (no JS support)
+// still submits the GET form normally.
+let fleetSearch = null;
+
+function initFleet() {
     const sentinel = document.querySelector('[data-infinite]');
     const grid = sentinel ? document.querySelector(sentinel.dataset.grid || '#fleet-grid') : null;
 
@@ -227,9 +233,22 @@ function initInfiniteScroll() {
 
     let next = sentinel.dataset.next || null;
     let loading = false;
+    let token = 0; // Guards against an in-flight page append landing after a search reset.
+
+    const observer = new IntersectionObserver((entries) => {
+        if (entries[0].isIntersecting) {
+            loadMore();
+        }
+    }, { rootMargin: '600px 0px' });
+
+    observer.observe(sentinel);
 
     if (paginate && next) {
         paginate.hidden = true; // The numbered pager is only the no-JS fallback.
+    }
+
+    if (!next) {
+        finish();
     }
 
     function finish() {
@@ -240,10 +259,53 @@ function initInfiniteScroll() {
         }
     }
 
+    function paintMeta(data) {
+        if (shownEl) {
+            shownEl.textContent = data.shown;
+        }
+        if (totalEl) {
+            totalEl.textContent = data.total;
+        }
+        if (bar) {
+            bar.hidden = data.shown >= data.total;
+        }
+        if (progress && data.total > 0) {
+            progress.style.width = `${Math.round((data.shown / data.total) * 100)}%`;
+        }
+    }
+
+    function mount(html, append) {
+        const template = document.createElement('template');
+        template.innerHTML = html.trim();
+
+        if (!append) {
+            grid.innerHTML = '';
+        }
+
+        [...template.content.children].forEach((el, i) => {
+            el.style.setProperty('--reveal-delay', `${((grid.children.length + i) % 3) * 90}ms`);
+            grid.append(el);
+        });
+
+        initCarousels(grid);
+        initReveal(grid);
+    }
+
+    async function fetchPage(url) {
+        const response = await fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+
+        if (!response.ok) {
+            throw new Error(`Fleet page came back ${response.status}`);
+        }
+
+        return response.json();
+    }
+
     async function loadMore() {
         if (loading || !next) {
             return;
         }
+        const myToken = token;
         loading = true;
 
         if (spinner) {
@@ -251,37 +313,14 @@ function initInfiniteScroll() {
         }
 
         try {
-            const response = await fetch(next, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+            const data = await fetchPage(next);
 
-            if (!response.ok) {
-                throw new Error(`Fleet page came back ${response.status}`);
+            if (myToken !== token) {
+                return; // A search reset the grid while this page was in flight.
             }
 
-            const data = await response.json();
-            const template = document.createElement('template');
-            template.innerHTML = data.html.trim();
-
-            [...template.content.children].forEach((el, i) => {
-                el.style.setProperty('--reveal-delay', `${((grid.children.length + i) % 3) * 90}ms`);
-                grid.append(el);
-            });
-
-            initCarousels(grid);
-            initReveal(grid);
-
-            if (shownEl) {
-                shownEl.textContent = data.shown;
-            }
-            if (totalEl) {
-                totalEl.textContent = data.total;
-            }
-            if (bar) {
-                bar.hidden = false;
-            }
-            if (progress && data.total > 0) {
-                progress.style.width = `${Math.round((data.shown / data.total) * 100)}%`;
-            }
-
+            mount(data.html, true);
+            paintMeta(data);
             next = data.next;
 
             if (!next) {
@@ -298,25 +337,148 @@ function initInfiniteScroll() {
                 paginate.hidden = false;
             }
         } finally {
-            loading = false;
+            if (myToken === token) {
+                loading = false;
 
-            if (spinner) {
-                spinner.hidden = true;
+                if (spinner) {
+                    spinner.hidden = true;
+                }
             }
         }
     }
 
-    const observer = new IntersectionObserver((entries) => {
-        if (entries[0].isIntersecting) {
-            loadMore();
+    // Replace the grid with page one of a brand-new query, then let the reader
+    // keep infinite-scrolling through that result set.
+    fleetSearch = async function search(params, baseUrl) {
+        const url = new URL(baseUrl, window.location.href);
+        url.search = '';
+
+        Object.entries(params).forEach(([key, value]) => {
+            if (value !== '' && value !== null && value !== undefined) {
+                url.searchParams.set(key, value);
+            }
+        });
+        url.searchParams.set('partial', '1');
+
+        const myToken = ++token;
+        loading = true;
+
+        if (spinner) {
+            spinner.hidden = false;
         }
-    }, { rootMargin: '600px 0px' });
+        if (endEl) {
+            endEl.hidden = true;
+        }
 
-    observer.observe(sentinel);
+        try {
+            const data = await fetchPage(url.toString());
 
-    if (!next) {
-        finish();
+            if (myToken !== token) {
+                return null; // Superseded by a more recent keystroke.
+            }
+
+            mount(data.html, false);
+            paintMeta(data);
+            next = data.next;
+
+            if (paginate) {
+                paginate.hidden = Boolean(next);
+            }
+
+            observer.disconnect();
+
+            if (next) {
+                observer.observe(sentinel);
+            } else {
+                finish();
+            }
+
+            return url;
+        } catch (error) {
+            // The AJAX path failed; fall back to a real navigation so the
+            // filters still apply exactly as they would without JavaScript.
+            url.searchParams.delete('partial');
+            window.location.href = url.toString();
+            return null;
+        } finally {
+            if (myToken === token) {
+                loading = false;
+
+                if (spinner) {
+                    spinner.hidden = true;
+                }
+            }
+        }
+    };
+}
+
+// ---------------------------------------------------------------------------
+// Live vehicle filters
+// ---------------------------------------------------------------------------
+
+function initFleetFilters() {
+    const form = document.querySelector('[data-fleet-filter]');
+
+    if (!form) {
+        return;
     }
+
+    const baseUrl = form.getAttribute('action') || window.location.pathname;
+    const keyword = form.querySelector('[data-fleet-q]');
+
+    function currentParams() {
+        const params = {};
+
+        new FormData(form).forEach((value, key) => {
+            params[key] = typeof value === 'string' ? value.trim() : '';
+        });
+
+        return params;
+    }
+
+    async function run() {
+        // Without the grid controller (e.g. IntersectionObserver unsupported)
+        // leave the plain GET submit / link navigation to the browser.
+        if (typeof fleetSearch !== 'function') {
+            return;
+        }
+
+        const url = await fleetSearch(currentParams(), baseUrl);
+
+        if (url) {
+            const clean = new URL(url.toString());
+            clean.searchParams.delete('partial');
+            window.history.replaceState({}, '', clean.toString());
+        }
+    }
+
+    let timer = null;
+
+    // Keyword filters as the reader types, debounced so a burst of keystrokes
+    // is a single request rather than one per character.
+    if (keyword) {
+        keyword.addEventListener('input', () => {
+            window.clearTimeout(timer);
+            timer = window.setTimeout(run, 350);
+        });
+    }
+
+    // Selects, numbers and dates have discrete values, so apply on change.
+    form.querySelectorAll('[data-fleet-apply]').forEach((control) => {
+        control.addEventListener('change', () => {
+            window.clearTimeout(timer);
+            run();
+        });
+    });
+
+    form.addEventListener('submit', (event) => {
+        if (typeof fleetSearch !== 'function') {
+            return; // No controller: let the browser perform the GET.
+        }
+        event.preventDefault();
+        window.clearTimeout(timer);
+        run();
+    });
 }
 
 // ---------------------------------------------------------------------------
@@ -367,6 +529,7 @@ function initPhotoManager() {
 document.addEventListener('DOMContentLoaded', () => {
     initCarousels();
     initReveal();
-    initInfiniteScroll();
+    initFleet();
+    initFleetFilters();
     initPhotoManager();
 });

@@ -90,4 +90,48 @@ class VehicleBrowseTest extends TestCase
             ->assertOk()
             ->assertDontSee('Continue to booking', false);
     }
+
+    public function test_the_filter_card_is_collapsible_and_reopens_when_filters_are_active(): void
+    {
+        Vehicle::factory()->available()->create(['make' => 'Toyota', 'model' => 'Hilux']);
+
+        // No filters applied: the card ships collapsed so the fleet reclaims
+        // the vertical space, and the summary carries no active-count badge.
+        $idle = $this->get('/vehicles')->assertOk()->getContent();
+        preg_match('/<details data-filter-card[^>]*>/', $idle, $idleTag);
+        $this->assertArrayHasKey(0, $idleTag, 'the filter card should be a native <details>');
+        $this->assertStringNotContainsString('open', $idleTag[0]);
+        $this->assertStringNotContainsString('active</span>', $idle);
+
+        // With a filter active the card reopens itself and reports how many.
+        $filtered = $this->get('/vehicles?q=Hilux')->assertOk()->getContent();
+        preg_match('/<details data-filter-card[^>]*>/', $filtered, $filteredTag);
+        $this->assertStringContainsString('open', $filteredTag[0]);
+        $this->assertStringContainsString('1 active</span>', $filtered);
+    }
+
+    public function test_the_filter_form_is_wired_for_live_keyword_search(): void
+    {
+        Vehicle::factory()->available()->create();
+
+        $html = $this->get('/vehicles')->assertOk()->getContent();
+
+        // The JS controller reads these hooks; without them the plain GET form
+        // is still the no-JS fallback.
+        $this->assertStringContainsString('data-fleet-filter', $html);
+        $this->assertStringContainsString('data-fleet-q', $html);
+        $this->assertStringContainsString('data-fleet-apply', $html);
+    }
+
+    public function test_the_partial_endpoint_filters_by_keyword_for_live_search(): void
+    {
+        $hilux = Vehicle::factory()->available()->create(['make' => 'Toyota', 'model' => 'Hilux']);
+        $passo = Vehicle::factory()->available()->create(['make' => 'Toyota', 'model' => 'Passo']);
+
+        // This is exactly the URL the live keyword search hits as the user type.
+        $json = $this->getJson('/vehicles?q=Hilux&partial=1')->assertOk()->json();
+
+        $this->assertStringContainsString($hilux->plate_number, $json['html']);
+        $this->assertStringNotContainsString($passo->plate_number, $json['html']);
+    }
 }
