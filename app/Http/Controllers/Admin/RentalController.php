@@ -17,6 +17,7 @@ use App\Models\Rental;
 use App\Models\Reservation;
 use App\Models\Vehicle;
 use App\Services\NotificationService;
+use App\Support\SlotPhotos;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -129,7 +130,11 @@ final class RentalController extends Controller
             ? Reservation::query()->with('customer')->find($data['reservation'])
             : null;
 
-        $rental = DB::transaction(function () use ($data, $vehicle, $start, $end, $reservation) {
+        // Handover evidence: angle photos taken as the customer drives away.
+        $pickupPhotos = SlotPhotos::store($request, 'pickup_photos', 'rentals');
+        $odometer = isset($data['odometer_at_pickup']) ? (int) $data['odometer_at_pickup'] : null;
+
+        $rental = DB::transaction(function () use ($data, $vehicle, $start, $end, $reservation, $pickupPhotos, $odometer) {
             $rental = new Rental([
                 'reservation_id' => $reservation?->id,
                 'customer_id' => $data['customer'],
@@ -143,6 +148,9 @@ final class RentalController extends Controller
                 'discount' => $data['discount'] ?? 0,
                 'pickup_location' => $data['pickup_location'] ?? null,
                 'dropoff_location' => $data['dropoff_location'] ?? null,
+                'odometer_at_pickup' => $odometer,
+                'fuel_at_pickup' => $data['fuel_at_pickup'] ?? null,
+                'pickup_photos' => $pickupPhotos === [] ? null : $pickupPhotos,
                 'notes' => $data['notes'] ?? null,
                 'status' => RentalStatus::Active,
             ]);
@@ -150,7 +158,10 @@ final class RentalController extends Controller
             $rental->save();
 
             $reservation?->update(['status' => ReservationStatus::Completed]);
-            $vehicle->update(['status' => VehicleStatus::Rented]);
+            $vehicle->update(array_filter([
+                'status' => VehicleStatus::Rented,
+                'mileage' => $odometer,
+            ], fn ($value) => $value !== null));
 
             $this->notifications->forCustomer(
                 $rental->customer ?? $reservation?->customer,

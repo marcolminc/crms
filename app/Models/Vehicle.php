@@ -6,30 +6,19 @@ use App\Enums\RentalStatus;
 use App\Enums\ReservationStatus;
 use App\Enums\VehicleStatus;
 use App\Enums\VehicleType;
+use App\Models\Concerns\HasPhotoSlots;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use Illuminate\Support\Facades\Storage;
 
 class Vehicle extends Model
 {
     use HasFactory, SoftDeletes;
-
-    /**
-     * Named gallery slots in display order. One photo per slot keeps the
-     * catalogue coherent and tells the carousel what angle it is showing.
-     *
-     * @var array<string,string>
-     */
-    public const SLOTS = [
-        'front' => 'Front',
-        'side' => 'Side',
-        'back' => 'Back',
-        'interior' => 'Interior',
-        'extra' => 'Extra angle',
-    ];
+    use HasPhotoSlots {
+        gallery as traitGallery;
+    }
 
     protected $fillable = [
         'plate_number',
@@ -127,78 +116,19 @@ class Vehicle extends Model
     }
 
     /**
-     * Gallery as slot => path on the public disk. The images column holds a
-     * keyed map; a legacy plain list is re-keyed onto the slots in order so
-     * older rows stay manageable, and a lone image_path still works as a
-     * slot-less fallback.
-     *
-     * @return array<string,string>
-     */
-    public function photoMap(): array
-    {
-        $images = is_array($this->images) ? $this->images : [];
-
-        if (array_is_list($images)) {
-            $legacy = [];
-            foreach ($images as $index => $path) {
-                if (is_string($path) && $path !== '') {
-                    $legacy[$index] = $path;
-                }
-            }
-            $images = [];
-            foreach (array_keys(self::SLOTS) as $slot) {
-                $path = array_shift($legacy);
-                if ($path !== null) {
-                    $images[$slot] = $path;
-                }
-            }
-        } else {
-            $ordered = [];
-            foreach (array_keys(self::SLOTS) as $slot) {
-                $path = $images[$slot] ?? null;
-                if (is_string($path) && $path !== '') {
-                    $ordered[$slot] = $path;
-                }
-            }
-            $images = $ordered;
-        }
-
-        return $images;
-    }
-
-    /**
-     * Ordered slides for the carousel.
+     * Ordered slides for the carousel; a lone legacy image_path still works
+     * as an uncaptioned fallback when the slot gallery is empty.
      *
      * @return list<array{slot:?string,label:string,path:string}>
      */
-    public function gallery(): array
+    public function gallery(string $column = 'images'): array
     {
-        $rows = [];
-        foreach ($this->photoMap() as $slot => $path) {
-            $rows[] = ['slot' => $slot, 'label' => self::SLOTS[$slot], 'path' => $path];
-        }
+        $rows = $this->traitGallery($column);
 
-        if ($rows === [] && is_string($this->image_path) && $this->image_path !== '') {
+        if ($rows === [] && $column === 'images' && is_string($this->image_path) && $this->image_path !== '') {
             $rows[] = ['slot' => null, 'label' => '', 'path' => $this->image_path];
         }
 
         return $rows;
-    }
-
-    public function hasPhotos(): bool
-    {
-        return $this->gallery() !== [];
-    }
-
-    /**
-     * Public URL for a gallery path or web URI stored by the legacy text field.
-     */
-    public function photoUrl(string $path): string
-    {
-        if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://')) {
-            return $path;
-        }
-
-        return str_starts_with($path, 'storage/') ? asset($path) : Storage::disk('public')->url($path);
     }
 }

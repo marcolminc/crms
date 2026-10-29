@@ -444,8 +444,11 @@ class RentalHistorySeeder extends Seeder
 
     private function seedNotifications(): void
     {
-        // Staff: overdue rentals drive alerts to the rental/admin/manager team.
-        $overdue = Rental::query()->where('status', RentalStatus::Overdue)->with('vehicle', 'customer')->get();
+        // Staff: overdue rentals alert the people involved - the handling
+        // staff and the branch manager who owns the desk - plus the customer
+        // who still has the car. The administrator is deliberately left out;
+        // they run the system, not the hire desk.
+        $overdue = Rental::query()->where('status', RentalStatus::Overdue)->with('vehicle', 'customer', 'staff')->get();
         $overdueLink = route('admin.rentals.index', ['status' => RentalStatus::Overdue->value]);
         foreach ($overdue as $rental) {
             $msg = sprintf(
@@ -454,12 +457,25 @@ class RentalHistorySeeder extends Seeder
                 $rental->vehicle->plate_number,
                 $rental->end_date->format('d M Y'),
             );
-            foreach (['admin', 'staff', 'branchManager'] as $key) {
+            $recipientIds = collect([$rental->staff_id, $this->staff['branchManager']->id])
+                ->filter()
+                ->unique();
+            foreach ($recipientIds as $userId) {
                 Notification::create([
-                    'user_id' => $this->staff[$key]->id,
+                    'user_id' => $userId,
                     'title' => 'Overdue rental',
                     'message' => $msg,
                     'link' => $overdueLink,
+                    'type' => 'alert',
+                    'read_at' => null,
+                ]);
+            }
+            if ($rental->customer->user) {
+                Notification::create([
+                    'user_id' => $rental->customer->user->id,
+                    'title' => 'Rental overdue',
+                    'message' => sprintf('Your %s rental was due back on %s. Please return it as soon as possible.', $rental->vehicle->display_name, $rental->end_date->format('d M Y')),
+                    'link' => route('customer.rentals.index'),
                     'type' => 'alert',
                     'read_at' => null,
                 ]);

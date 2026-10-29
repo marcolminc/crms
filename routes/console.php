@@ -14,3 +14,10 @@ Schedule::command('payments:reconcile')
     ->everyTenMinutes()
     ->withoutOverlapping()
     ->runInBackground();
+
+// readme #24/#25: overdue hires are chased by the desk, not the administrator.
+// Flag each rental once (status transition de-duplicates) and notify the
+// involved staff, branch managers and the customer first thing in the morning.
+Schedule::command('rentals:flag-overdue')
+    ->dailyAt('07:30')
+    ->withoutOverlapping();

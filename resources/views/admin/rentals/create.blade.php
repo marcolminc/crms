@@ -51,7 +51,7 @@
         </form>
     </x-card>
 
-    <form method="POST" action="{{ route('admin.rentals.store') }}">
+    <form method="POST" action="{{ route('admin.rentals.store') }}" enctype="multipart/form-data">
         @csrf
         @if ($reservation)
             <input type="hidden" name="reservation" value="{{ $reservation->id }}">
@@ -104,6 +104,16 @@
                 Vehicles shown are those with status Available or Reserved and free for the selected period.
                 Leave the period blank to list all Available/Reserved vehicles.
             </p>
+
+            <div class="mb-6 rounded-xl border border-slate-200 bg-slate-50/40 p-4" data-photo-manager>
+                <h3 class="mb-1 text-sm font-semibold text-slate-800">Pick-up handover record</h3>
+                <p class="mb-4 text-xs text-slate-500">Record the odometer and fuel at pick-up, and optionally photograph the vehicle from each angle.</p>
+                <div class="mb-4 grid gap-4 sm:grid-cols-2">
+                    <x-field label="Odometer at pick-up (km)" name="odometer_at_pickup" type="number" :value="old('odometer_at_pickup')" />
+                    <x-field label="Fuel at pick-up" name="fuel_at_pickup" :value="old('fuel_at_pickup')" placeholder="Full, 3/4, Half..." />
+                </div>
+                <x-photo-slots :map="[]" :subject="null" prefix="pickup_photos" />
+            </div>
 
             <div class="flex items-center gap-3">
                 <button type="submit"

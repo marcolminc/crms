@@ -48,6 +48,19 @@ class NotificationService
     }
 
     /**
+     * Branch managers carry escalation duty for the hire desk (overdue
+     * returns), independent of who handled the rental. The Admin is excluded.
+     */
+    public function branchManagers(): array
+    {
+        return User::query()
+            ->where('role', UserRole::BranchManager)
+            ->where('is_active', true)
+            ->pluck('id')
+            ->all();
+    }
+
+    /**
      * Money matters that need a human: the accountant reconciles, the
      * administrator is told because gateway outages are system incidents.
      */

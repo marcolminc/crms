@@ -3,13 +3,14 @@
 namespace App\Models;
 
 use App\Enums\VehicleCondition;
+use App\Models\Concerns\HasPhotoSlots;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class VehicleReturn extends Model
 {
-    use HasFactory;
+    use HasFactory, HasPhotoSlots;
 
     protected $fillable = [
         'rental_id',
@@ -19,6 +20,7 @@ class VehicleReturn extends Model
         'fuel_level',
         'mileage_at_return',
         'damage_notes',
+        'photos',
         'additional_charges',
         'processed_by',
     ];
@@ -30,6 +32,7 @@ class VehicleReturn extends Model
             'additional_charges' => 'decimal:2',
             'condition' => VehicleCondition::class,
             'mileage_at_return' => 'integer',
+            'photos' => 'array',
         ];
     }
 

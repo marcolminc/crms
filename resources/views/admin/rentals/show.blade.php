@@ -84,6 +84,23 @@
                     </p>
                 @endif
 
+                @if ($rental->odometer_at_pickup !== null || $rental->fuel_at_pickup || $rental->hasPhotos('pickup_photos'))
+                    <div class="mt-4 rounded-lg border border-slate-200 bg-slate-50/50 p-3">
+                        <p class="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Pick-up handover</p>
+                        <div class="mb-3 grid gap-x-6 gap-y-2 text-sm sm:grid-cols-2">
+                            <div class="flex justify-between border-b border-slate-200 pb-1">
+                                <dt class="text-slate-500">Odometer</dt>
+                                <dd class="font-medium text-slate-800">{{ $rental->odometer_at_pickup !== null ? number_format($rental->odometer_at_pickup).' km' : '—' }}</dd>
+                            </div>
+                            <div class="flex justify-between border-b border-slate-200 pb-1">
+                                <dt class="text-slate-500">Fuel</dt>
+                                <dd class="font-medium text-slate-800">{{ $rental->fuel_at_pickup ?? '—' }}</dd>
+                            </div>
+                        </div>
+                        <x-photo-grid :rows="$rental->gallery('pickup_photos')" :subject="$rental" alt="pick-up photo" />
+                    </div>
+                @endif
+
                 @if ($rental->notes)
                     <div class="mt-3">
                         <p class="text-xs font-medium uppercase tracking-wide text-slate-500">Notes</p>
@@ -156,6 +173,12 @@
                     </dl>
                     @if ($return->damage_notes)
                         <p class="mt-3 whitespace-pre-line text-sm text-slate-700">{{ $return->damage_notes }}</p>
+                    @endif
+                    @if ($return->hasPhotos('photos'))
+                        <div class="mt-4">
+                            <p class="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Return photos</p>
+                            <x-photo-grid :rows="$return->gallery('photos')" :subject="$return" alt="return photo" />
+                        </div>
                     @endif
                     <p class="mt-3 text-xs text-slate-500">Processed by {{ $return->processedBy?->name ?? '—' }}</p>
                 </x-card>

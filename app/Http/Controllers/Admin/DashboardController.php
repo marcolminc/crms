@@ -5,10 +5,13 @@ namespace App\Http\Controllers\Admin;
 use App\Enums\PaymentStatus;
 use App\Enums\RentalStatus;
 use App\Enums\ReservationStatus;
+use App\Enums\UserRole;
 use App\Http\Controllers\Controller;
+use App\Models\Customer;
 use App\Models\Payment;
 use App\Models\Rental;
 use App\Models\Reservation;
+use App\Models\User;
 use App\Models\Vehicle;
 use Illuminate\Http\Request;
 
@@ -24,6 +27,14 @@ final class DashboardController extends Controller
     {
         $today = today();
         $user = $request->user();
+
+        // readme #26: the administrator runs the system - accounts, roles,
+        // fleet and customer oversight - not the day-to-day hire desk. Give
+        // them a management dashboard; every other staff role keeps the
+        // operational queues (pick-ups, returns, overdue, takings).
+        if ($user?->hasRole(UserRole::Admin)) {
+            return view('admin.dashboard', $this->adminData($user, $today));
+        }
 
         $openRentals = Rental::query()
             ->open()
@@ -64,5 +75,36 @@ final class DashboardController extends Controller
             'outstanding' => max(0, (float) $openRentals->sum('total_amount') - $collectedOnOpen),
             'alerts' => $user?->notifications()->limit(5)->get() ?? collect(),
         ]);
+    }
+
+    /**
+     * Administration-relevant metrics only: who can use the system, how the
+     * fleet and customer base look at a high level, and the reports to run.
+     *
+     * @return array<string,mixed>
+     */
+    private function adminData(User $user, $today): array
+    {
+        return [
+            'user' => $user,
+            'isAdmin' => true,
+            'totalUsers' => User::query()->count(),
+            'activeUsers' => User::query()->where('is_active', true)->count(),
+            'inactiveUsers' => User::query()->where('is_active', false)->count(),
+            'usersByRole' => User::query()
+                ->selectRaw('role, count(*) aggregate')
+                ->groupBy('role')
+                ->pluck('aggregate', 'role'),
+            'vehicleCounts' => Vehicle::query()
+                ->selectRaw('status, count(*) aggregate')
+                ->groupBy('status')
+                ->pluck('aggregate', 'status'),
+            'totalVehicles' => Vehicle::query()->count(),
+            'totalCustomers' => Customer::query()->count(),
+            'newCustomersThisMonth' => Customer::query()
+                ->whereBetween('created_at', [now()->startOfMonth(), now()->endOfMonth()])
+                ->count(),
+            'alerts' => $user->notifications()->limit(5)->get(),
+        ];
     }
 }

@@ -16,7 +16,7 @@
         </x-slot:actions>
     </x-page-header>
 
-    <form method="POST" action="{{ route('admin.returns.store', $rental) }}">
+    <form method="POST" action="{{ route('admin.returns.store', $rental) }}" enctype="multipart/form-data">
         @csrf
         <x-card>
             <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -50,6 +50,12 @@
                 Extra charges are added to the rental total. A Damaged condition sends the vehicle to maintenance; otherwise it
                 returns to the fleet. Current rental balance before return: {{ number_format($rental->balanceDue(), 0) }} TZS.
             </p>
+
+            <div class="mb-6 rounded-xl border border-slate-200 bg-slate-50/40 p-4" data-photo-manager>
+                <h3 class="mb-1 text-sm font-semibold text-slate-800">Return condition photos</h3>
+                <p class="mb-4 text-xs text-slate-500">Photograph the vehicle at drop-off from each angle as evidence of its condition.</p>
+                <x-photo-slots :map="[]" :subject="null" prefix="photos" />
+            </div>
 
             <div class="flex items-center gap-3">
                 <button type="submit"

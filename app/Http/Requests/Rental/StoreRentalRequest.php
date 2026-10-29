@@ -22,7 +22,7 @@ final class StoreRentalRequest extends FormRequest
 
     public function rules(): array
     {
-        return [
+        $rules = [
             'reservation' => ['nullable', 'integer', Rule::exists('reservations', 'id')],
             'customer' => ['required', 'integer', Rule::exists('customers', 'id')],
             'vehicle' => ['required', 'integer', Rule::exists('vehicles', 'id')->whereNull('deleted_at')],
@@ -33,7 +33,29 @@ final class StoreRentalRequest extends FormRequest
             'additional_charges' => ['nullable', 'numeric', 'min:0', 'max:9999999999'],
             'discount' => ['nullable', 'numeric', 'min:0', 'max:9999999999'],
             'notes' => ['nullable', 'string', 'max:5000'],
+            // Handover record: what the car looked like when it drove away.
+            'odometer_at_pickup' => ['nullable', 'integer', 'min:0', 'max:99999999'],
+            'fuel_at_pickup' => ['nullable', 'string', 'max:20'],
+            'pickup_photos' => ['nullable', 'array'],
         ];
+
+        foreach (array_keys(Vehicle::SLOTS) as $slot) {
+            $rules["pickup_photos.$slot"] = ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:4096'];
+        }
+
+        return $rules;
+    }
+
+    public function messages(): array
+    {
+        $messages = [];
+        foreach (Vehicle::SLOTS as $slot => $label) {
+            $messages["pickup_photos.$slot.image"] = "The {$label} pickup photo must be an image file.";
+            $messages["pickup_photos.$slot.mimes"] = "The {$label} pickup photo must be a JPG, PNG or WebP file.";
+            $messages["pickup_photos.$slot.max"] = "The {$label} pickup photo must be 4 MB or smaller.";
+        }
+
+        return $messages;
     }
 
     public function withValidator(Validator $validator): void
@@ -53,6 +75,16 @@ final class StoreRentalRequest extends FormRequest
             $vehicle = Vehicle::query()->find($this->integer('vehicle'));
             if (! $vehicle || ! in_array($vehicle->status, [VehicleStatus::Available, VehicleStatus::Reserved], true)) {
                 $validator->errors()->add('vehicle', 'Only Available or Reserved vehicles can be hired out.');
+            }
+
+            if ($vehicle && $this->filled('odometer_at_pickup')
+                && $vehicle->mileage !== null
+                && (int) $this->input('odometer_at_pickup') < (int) $vehicle->mileage) {
+                $validator->errors()->add(
+                    'odometer_at_pickup',
+                    'Pickup odometer cannot be lower than the vehicle\'s recorded mileage ('
+                    .number_format((int) $vehicle->mileage).' km).'
+                );
             }
 
             $excludeReservationId = null;

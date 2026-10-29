@@ -4,6 +4,7 @@ namespace App\Http\Requests\Return;
 
 use App\Enums\VehicleCondition;
 use App\Models\Rental;
+use App\Models\Vehicle;
 use Carbon\Carbon;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -18,14 +19,34 @@ final class StoreReturnRequest extends FormRequest
 
     public function rules(): array
     {
-        return [
+        $rules = [
             'returned_at' => ['nullable', 'date'],
             'condition' => ['required', Rule::in(array_keys(VehicleCondition::options()))],
             'fuel_level' => ['nullable', 'string', 'max:20'],
             'mileage_at_return' => ['nullable', 'integer', 'min:0', 'max:99999999'],
             'damage_notes' => ['nullable', 'string', 'max:5000'],
             'additional_charges' => ['nullable', 'numeric', 'min:0', 'max:9999999999'],
+            // Inspection evidence taken as the car comes back.
+            'photos' => ['nullable', 'array'],
         ];
+
+        foreach (array_keys(Vehicle::SLOTS) as $slot) {
+            $rules["photos.$slot"] = ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:4096'];
+        }
+
+        return $rules;
+    }
+
+    public function messages(): array
+    {
+        $messages = [];
+        foreach (Vehicle::SLOTS as $slot => $label) {
+            $messages["photos.$slot.image"] = "The {$label} return photo must be an image file.";
+            $messages["photos.$slot.mimes"] = "The {$label} return photo must be a JPG, PNG or WebP file.";
+            $messages["photos.$slot.max"] = "The {$label} return photo must be 4 MB or smaller.";
+        }
+
+        return $messages;
     }
 
     public function withValidator(Validator $validator): void

@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Enums\PaymentStatus;
 use App\Enums\PaymentType;
 use App\Enums\RentalStatus;
+use App\Models\Concerns\HasPhotoSlots;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -14,7 +15,7 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Rental extends Model
 {
-    use HasFactory;
+    use HasFactory, HasPhotoSlots;
 
     protected $fillable = [
         'reservation_id',
@@ -32,6 +33,9 @@ class Rental extends Model
         'status',
         'pickup_location',
         'dropoff_location',
+        'odometer_at_pickup',
+        'fuel_at_pickup',
+        'pickup_photos',
         'notes',
     ];
 
@@ -47,6 +51,8 @@ class Rental extends Model
             'discount' => 'decimal:2',
             'total_amount' => 'decimal:2',
             'status' => RentalStatus::class,
+            'odometer_at_pickup' => 'integer',
+            'pickup_photos' => 'array',
         ];
     }
 

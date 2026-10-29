@@ -11,6 +11,7 @@ use App\Http\Requests\Return\StoreReturnRequest;
 use App\Models\Rental;
 use App\Models\Reservation;
 use App\Services\NotificationService;
+use App\Support\SlotPhotos;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -60,7 +61,10 @@ final class ReturnController extends Controller
         $extra = (float) ($data['additional_charges'] ?? 0);
         $vehicle = $rental->vehicle;
 
-        DB::transaction(function () use ($rental, $vehicle, $data, $returnedAt, $extra) {
+        // Inspection evidence collected as the car comes back.
+        $photos = SlotPhotos::store($request, 'photos', 'returns');
+
+        DB::transaction(function () use ($rental, $vehicle, $data, $returnedAt, $extra, $photos) {
             $rental->vehicleReturn()->create([
                 'vehicle_id' => $rental->vehicle_id,
                 'returned_at' => $returnedAt,
@@ -68,6 +72,7 @@ final class ReturnController extends Controller
                 'fuel_level' => $data['fuel_level'] ?? null,
                 'mileage_at_return' => $data['mileage_at_return'] ?? null,
                 'damage_notes' => $data['damage_notes'] ?? null,
+                'photos' => $photos === [] ? null : $photos,
                 'additional_charges' => $extra,
                 'processed_by' => auth()->id(),
             ]);
