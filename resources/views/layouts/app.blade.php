@@ -130,7 +130,7 @@
                 <a href="{{ $user?->isStaff() ? route('admin.dashboard') : ($user?->isDriver() ? route('notifications.index') : route('customer.dashboard')) }}"
                    class="flex items-center gap-2.5">
                     <img src="{{ asset('logo.png') }}" alt="{{ config('app.name') }} logo"
-                         class="h-9 w-auto sm:h-11">
+                         class="h-11 w-auto sm:h-12">
                 </a>
             </div>
 
