@@ -5,7 +5,7 @@
 @section('content')
     <x-page-header title="Add Vehicle" description="Register a new vehicle in the fleet." />
 
-    <form method="POST" action="{{ route('admin.vehicles.store') }}">
+    <form method="POST" action="{{ route('admin.vehicles.store') }}" enctype="multipart/form-data">
         @csrf
         <x-card>
             @include('admin.vehicles._form')

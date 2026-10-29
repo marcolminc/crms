@@ -78,41 +78,28 @@
         </form>
     </x-card>
 
-    <div class="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        @forelse ($vehicles as $vehicle)
-            @php
-                $window = array_filter(['from' => $filters['from'], 'to' => $filters['to']]);
-                $detailUrl = route('vehicles.show', $vehicle).($window ? '?'.http_build_query($window) : '');
-            @endphp
-            <a href="{{ $detailUrl }}"
-               class="block rounded-xl border border-slate-200 bg-white p-5 shadow-sm transition hover:border-emerald-300 hover:shadow">
-                <div class="flex items-start justify-between gap-2">
-                    <h3 class="text-base font-semibold text-slate-900">{{ $vehicle->make }} {{ $vehicle->model }}</h3>
-                    <x-badge :value="$vehicle->status->value" />
-                </div>
-                <p class="mt-1 text-sm text-slate-500">Plate {{ $vehicle->plate_number }}</p>
-                <dl class="mt-3 grid grid-cols-2 gap-x-3 gap-y-1 text-sm text-slate-600">
-                    <div>{{ $vehicle->type->label() }}</div>
-                    <div>{{ $vehicle->seats }} seats</div>
-                    <div>{{ ucfirst($vehicle->transmission) }}</div>
-                    <div>{{ ucfirst($vehicle->fuel_type) }}</div>
-                </dl>
-                <p class="mt-4 text-lg font-semibold text-slate-900">
-                    {{ number_format($vehicle->rate_per_day, 0) }} TZS
-                    <span class="text-xs font-normal text-slate-500">/ day</span>
-                </p>
-            </a>
-        @empty
-            <div class="sm:col-span-2 lg:col-span-3">
-                <x-alert type="info">
-                    No vehicles match your filters for the selected dates. Try widening the dates or removing some filters.
-                </x-alert>
-            </div>
-        @endforelse
+    <div id="fleet-grid" class="mt-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+        @include('vehicles._partials.cards')
+    </div>
+
+    <div id="fleet-more" class="mt-8 text-center"
+         data-infinite
+         data-grid="#fleet-grid"
+         data-next="{{ $nextPageUrl }}">
+        <p class="text-xs text-slate-400">
+            Showing <span data-infinite-shown>{{ $vehicles->count() }}</span>
+            of <span data-infinite-total>{{ $vehicles->total() }}</span> vehicles
+            <span data-infinite-end hidden &mdash; that is the whole fleet.</span>
+        </p>
+        <div class="mx-auto mt-2 h-1 w-44 overflow-hidden rounded-full bg-slate-200" data-infinite-bar {{ $vehicles->total() > $vehicles->count() ? '' : 'hidden' }}>
+            <div class="h-full rounded-full bg-emerald-500 transition-all duration-500" data-infinite-progress
+                 style="width: {{ $vehicles->total() > 0 ? round($vehicles->count() / $vehicles->total() * 100) : 100 }}%"></div>
+        </div>
+        <span class="mt-2 inline-block animate-pulse text-xs font-medium text-slate-400" data-infinite-spinner hidden>Loading more vehicles&hellip;</span>
     </div>
 
     @if ($vehicles->hasPages())
-        <div class="mt-8">
+        <div class="mt-6" data-infinite-paginate>
             {{ $vehicles->links() }}
         </div>
     @endif

@@ -14,6 +14,8 @@ use App\Models\Reservation;
 use App\Models\Vehicle;
 use App\Services\NotificationService;
 use Illuminate\Http\Request;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 
 final class VehicleController extends Controller
 {
@@ -56,8 +58,15 @@ final class VehicleController extends Controller
     public function store(StoreVehicleRequest $request)
     {
         $data = $request->validated();
+        unset($data['photos'], $data['remove_images']);
         $data['features'] = $this->parseFeatures($data['features'] ?? null);
         $data['status'] = $data['status'] ?? VehicleStatus::Available->value;
+
+        $uploaded = array_map(
+            fn (UploadedFile $file): string => $file->store('vehicles', 'public'),
+            $this->uploadedPhotos($request),
+        );
+        $data['images'] = $uploaded === [] ? null : array_values($uploaded);
 
         Vehicle::create($data);
 
@@ -76,9 +85,30 @@ final class VehicleController extends Controller
     public function update(UpdateVehicleRequest $request, Vehicle $vehicle)
     {
         $data = $request->validated();
+        unset($data['photos'], $data['remove_images']);
         $data['features'] = $this->parseFeatures($data['features'] ?? null);
 
+        $existing = $vehicle->gallery();
+        $removals = array_values(array_filter(
+            array_map(fn ($p): ?string => is_string($p) ? $p : null, (array) $request->input('remove_images', [])),
+            fn (string $path): bool => in_array($path, $existing, true),
+        ));
+        $kept = array_values(array_diff($existing, $removals));
+        $files = $this->uploadedPhotos($request);
+
+        if (count($kept) + count($files) > Vehicle::MAX_PHOTOS) {
+            return redirect()->back()->withInput()->with(
+                'error',
+                'A vehicle carries at most '.Vehicle::MAX_PHOTOS.' photos — remove some before adding more.',
+            );
+        }
+
+        $uploaded = array_map(fn (UploadedFile $file): string => $file->store('vehicles', 'public'), $files);
+        $gallery = array_merge($kept, $uploaded);
+        $data['images'] = $gallery === [] ? null : array_values($gallery);
+
         $vehicle->update($data);
+        $this->deletePhotos($removals);
 
         return redirect()->route('admin.vehicles.index')->with('status', 'Vehicle updated.');
     }
@@ -149,5 +179,31 @@ final class VehicleController extends Controller
         $items = array_filter(array_map('trim', explode(',', $features)), fn ($item) => $item !== '');
 
         return $items === [] ? null : array_values($items);
+    }
+
+    /**
+     * @return list<UploadedFile>
+     */
+    private function uploadedPhotos(StoreVehicleRequest $request): array
+    {
+        $files = $request->file('photos') ?? [];
+
+        return array_values(array_filter(
+            is_array($files) ? $files : [$files],
+            fn ($file): bool => $file instanceof UploadedFile && $file->isValid(),
+        ));
+    }
+
+    /**
+     * Only ever removes files from our own vehicles folder on the public disk;
+     * legacy free-text paths are simply dropped from the list.
+     */
+    private function deletePhotos(array $paths): void
+    {
+        foreach ($paths as $path) {
+            if (is_string($path) && str_starts_with($path, 'vehicles/') && ! str_contains($path, '..')) {
+                Storage::disk('public')->delete($path);
+            }
+        }
     }
 }

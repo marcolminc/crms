@@ -4,6 +4,7 @@ namespace App\Http\Requests\Vehicle;
 
 use App\Enums\VehicleStatus;
 use App\Enums\VehicleType;
+use App\Models\Vehicle;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -47,6 +48,11 @@ class StoreVehicleRequest extends FormRequest
             'description' => ['nullable', 'string', 'max:5000'],
             'features' => ['nullable', 'string', 'max:2000'],
             'image_path' => ['nullable', 'string', 'max:255'],
+            // Front/back/side/interior shots for the display carousel.
+            'photos' => ['nullable', 'array', 'max:'.Vehicle::MAX_PHOTOS],
+            'photos.*' => ['image', 'mimes:jpg,jpeg,png,webp', 'max:4096'],
+            'remove_images' => ['nullable', 'array'],
+            'remove_images.*' => ['string', 'max:255'],
         ];
     }
 
@@ -56,6 +62,10 @@ class StoreVehicleRequest extends FormRequest
             'plate_number.regex' => 'The plate number may only contain letters, digits, spaces, hyphens and slashes (4-20 characters).',
             'plate_number.unique' => 'A vehicle with this plate number already exists.',
             'rate_per_day.gt' => 'The daily rate must be greater than zero.',
+            'photos.max' => 'A vehicle can have at most '.Vehicle::MAX_PHOTOS.' photos.',
+            'photos.*.image' => 'Each photo must be an image file.',
+            'photos.*.mimes' => 'Photos must be JPG, PNG or WebP files.',
+            'photos.*.max' => 'Each photo must be 4 MB or smaller.',
         ];
     }
 }

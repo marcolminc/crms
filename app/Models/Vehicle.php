@@ -11,10 +11,14 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\Storage;
 
 class Vehicle extends Model
 {
     use HasFactory, SoftDeletes;
+
+    /** Front, back, side, interior — plus a couple of spares for angles. */
+    public const MAX_PHOTOS = 6;
 
     protected $fillable = [
         'plate_number',
@@ -32,6 +36,7 @@ class Vehicle extends Model
         'description',
         'features',
         'image_path',
+        'images',
     ];
 
     protected function casts(): array
@@ -41,6 +46,7 @@ class Vehicle extends Model
             'status' => VehicleStatus::class,
             'rate_per_day' => 'decimal:2',
             'features' => 'array',
+            'images' => 'array',
             'year' => 'integer',
             'seats' => 'integer',
             'mileage' => 'integer',
@@ -107,5 +113,42 @@ class Vehicle extends Model
     public function getDisplayNameAttribute(): string
     {
         return trim("{$this->make} {$this->model} {$this->plate_number}");
+    }
+
+    /**
+     * Photo gallery paths relative to the public disk. The uploaded gallery wins;
+     * a lone legacy image_path is kept as a fallback so older rows still show.
+     *
+     * @return list<string>
+     */
+    public function gallery(): array
+    {
+        $paths = array_values(array_filter(
+            is_array($this->images) ? $this->images : [],
+            fn ($path): bool => is_string($path) && $path !== '',
+        ));
+
+        if ($paths === [] && is_string($this->image_path) && $this->image_path !== '') {
+            $paths = [$this->image_path];
+        }
+
+        return $paths;
+    }
+
+    public function hasPhotos(): bool
+    {
+        return $this->gallery() !== [];
+    }
+
+    /**
+     * Public URL for a gallery path or web URI stored by the legacy text field.
+     */
+    public function photoUrl(string $path): string
+    {
+        if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://')) {
+            return $path;
+        }
+
+        return str_starts_with($path, 'storage/') ? asset($path) : Storage::disk('public')->url($path);
     }
 }

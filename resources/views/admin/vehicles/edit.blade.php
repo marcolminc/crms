@@ -5,7 +5,7 @@
 @section('content')
     <x-page-header title="Edit Vehicle" description="Update the details for {{ $vehicle->plate_number }}." />
 
-    <form method="POST" action="{{ route('admin.vehicles.update', $vehicle) }}">
+    <form method="POST" action="{{ route('admin.vehicles.update', $vehicle) }}" enctype="multipart/form-data">
         @csrf
         @method('PUT')
         <x-card>

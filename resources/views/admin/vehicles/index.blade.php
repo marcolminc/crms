@@ -63,6 +63,7 @@
             <table class="w-full text-sm">
                 <thead>
                     <tr class="text-left text-xs uppercase tracking-wide text-slate-500">
+                        <th class="py-2 pr-4">Photo</th>
                         <th class="py-2 pr-4">Plate</th>
                         <th class="py-2 pr-4">Vehicle</th>
                         <th class="py-2 pr-4">Type</th>
@@ -77,6 +78,14 @@
                 <tbody class="divide-y divide-slate-100">
                     @forelse ($vehicles as $vehicle)
                         <tr>
+                            <td class="py-3 pr-4">
+                                @if ($vehicle->hasPhotos())
+                                    <img src="{{ $vehicle->photoUrl($vehicle->gallery()[0]) }}"
+                                         alt="" class="h-12 w-20 rounded-md object-cover">
+                                @else
+                                    <div class="flex h-12 w-20 items-center justify-center rounded-md bg-slate-100 text-[10px] font-medium text-slate-400">None</div>
+                                @endif
+                            </td>
                             <td class="py-3 pr-4 font-medium text-slate-900">{{ $vehicle->plate_number }}</td>
                             <td class="py-3 pr-4">
                                 {{ $vehicle->make }} {{ $vehicle->model }}
@@ -115,7 +124,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="9" class="py-6 text-center text-slate-500">No vehicles match the current filters.</td>
+                            <td colspan="10" class="py-6 text-center text-slate-500">No vehicles match the current filters.</td>
                         </tr>
                     @endforelse
                 </tbody>

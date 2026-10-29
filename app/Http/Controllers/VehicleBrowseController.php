@@ -42,17 +42,36 @@ final class VehicleBrowseController extends Controller
 
         $vehicles = $query->orderBy('rate_per_day')->paginate(12)->withQueryString();
 
+        $filters = [
+            'q' => $this->text($request->query('q')),
+            'type' => $validType ? $type : '',
+            'seats' => $validSeats ? (string) (int) $seats : '',
+            'max_rate' => $validMaxRate ? (string) (float) $maxRate : '',
+            'from' => $from ?? '',
+            'to' => $to ?? '',
+        ];
+
+        // The infinite-scroll watcher asks for one page at a time and gets the
+        // ready-rendered card grid back; without JS the classic links still work.
+        if ($request->boolean('partial')) {
+            return response()->json([
+                'html' => view('vehicles._partials.cards', [
+                    'vehicles' => $vehicles,
+                    'filters' => $filters,
+                ])->toHtml(),
+                'next' => $vehicles->hasMorePages()
+                    ? $vehicles->appends(['partial' => 1])->nextPageUrl()
+                    : null,
+                'shown' => $vehicles->firstItem() === null ? 0 : $vehicles->count() + $vehicles->firstItem() - 1,
+                'total' => $vehicles->total(),
+            ]);
+        }
+
         return view('vehicles.index', [
             'vehicles' => $vehicles,
             'types' => VehicleType::options(),
-            'filters' => [
-                'q' => $this->text($request->query('q')),
-                'type' => $validType ? $type : '',
-                'seats' => $validSeats ? (string) (int) $seats : '',
-                'max_rate' => $validMaxRate ? (string) (float) $maxRate : '',
-                'from' => $from ?? '',
-                'to' => $to ?? '',
-            ],
+            'nextPageUrl' => $vehicles->hasMorePages() ? $vehicles->appends(['partial' => 1])->nextPageUrl() : null,
+            'filters' => $filters,
         ]);
     }
 

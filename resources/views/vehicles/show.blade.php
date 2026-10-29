@@ -13,6 +13,10 @@
         </x-page-header>
     </div>
 
+    <div class="mt-4 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+        <x-vehicle-carousel :vehicle="$vehicle" ratio="aspect-[16/9]" :eager="true" />
+    </div>
+
     <div class="grid gap-6 lg:grid-cols-3">
         <div class="space-y-6 lg:col-span-2">
             <x-card title="Specifications">
