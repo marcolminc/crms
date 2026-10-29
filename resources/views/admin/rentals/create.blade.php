@@ -86,15 +86,15 @@
 
                 <x-field label="Start date" name="start_date" type="date" :value="$from" required min="{{ $today }}" />
                 <x-field label="End date" name="end_date" type="date" :value="$to" required min="{{ $today }}" />
-                <x-field label="Additional charges (TZS)" name="additional_charges" type="number" :value="''" />
+                <x-field label="Additional charges (TZS)" name="additional_charges" type="number" :value="''" min="0" step="0.01" max="9999999999" />
 
-                <x-field label="Discount (TZS)" name="discount" type="number" :value="''" />
-                <x-field label="Pick-up location" name="pickup_location" :value="''" />
-                <x-field label="Drop-off location" name="dropoff_location" :value="''" />
+                <x-field label="Discount (TZS)" name="discount" type="number" :value="''" min="0" step="0.01" max="9999999999" />
+                <x-field label="Pick-up location" name="pickup_location" :value="''" maxlength="255" />
+                <x-field label="Drop-off location" name="dropoff_location" :value="''" maxlength="255" />
 
                 <div class="mb-4 sm:col-span-2 lg:col-span-3">
                     <label for="notes" class="mb-1 block text-sm font-medium text-slate-700">Notes</label>
-                    <textarea id="notes" name="notes" rows="3"
+                    <textarea id="notes" name="notes" rows="3" maxlength="5000"
                               class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-emerald-500 focus:ring-emerald-500">{{ old('notes', $reservation?->notes ?? '') }}</textarea>
                     @error('notes')<p class="mt-1 text-xs text-rose-600">{{ $message }}</p>@enderror
                 </div>
@@ -109,7 +109,7 @@
                 <h3 class="mb-1 text-sm font-semibold text-slate-800">Pick-up handover record</h3>
                 <p class="mb-4 text-xs text-slate-500">Record the odometer and fuel at pick-up, and optionally photograph the vehicle from each angle.</p>
                 <div class="mb-4 grid gap-4 sm:grid-cols-2">
-                    <x-field label="Odometer at pick-up (km)" name="odometer_at_pickup" type="number" :value="old('odometer_at_pickup', $selectedMileage)" />
+                    <x-field label="Odometer at pick-up (km)" name="odometer_at_pickup" type="number" :value="old('odometer_at_pickup', $selectedMileage)" min="0" step="1" max="99999999" />
                     <div class="mb-4">
                         <label for="fuel_at_pickup" class="mb-1 block text-sm font-medium text-slate-700">Fuel at pick-up</label>
                         <select id="fuel_at_pickup" name="fuel_at_pickup" class="{{ $selectClass }}">

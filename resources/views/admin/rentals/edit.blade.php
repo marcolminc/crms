@@ -38,14 +38,14 @@
                     </p>
                 </div>
 
-                <x-field label="Additional charges (TZS)" name="additional_charges" type="number" :value="$rental->additional_charges" />
-                <x-field label="Discount (TZS)" name="discount" type="number" :value="$rental->discount" />
-                <x-field label="Pick-up location" name="pickup_location" :value="$rental->pickup_location" />
-                <x-field label="Drop-off location" name="dropoff_location" :value="$rental->dropoff_location" />
+                <x-field label="Additional charges (TZS)" name="additional_charges" type="number" :value="$rental->additional_charges" min="0" step="0.01" max="9999999999" />
+                <x-field label="Discount (TZS)" name="discount" type="number" :value="$rental->discount" min="0" step="0.01" max="9999999999" />
+                <x-field label="Pick-up location" name="pickup_location" :value="$rental->pickup_location" maxlength="255" />
+                <x-field label="Drop-off location" name="dropoff_location" :value="$rental->dropoff_location" maxlength="255" />
 
                 <div class="mb-4 sm:col-span-2 lg:col-span-3">
                     <label for="notes" class="mb-1 block text-sm font-medium text-slate-700">Notes</label>
-                    <textarea id="notes" name="notes" rows="3"
+                    <textarea id="notes" name="notes" rows="3" maxlength="5000"
                               class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-emerald-500 focus:ring-emerald-500">{{ old('notes', $rental->notes) }}</textarea>
                     @error('notes')<p class="mt-1 text-xs text-rose-600">{{ $message }}</p>@enderror
                 </div>

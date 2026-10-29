@@ -23,13 +23,13 @@
             <x-card title="Rental details">
                 <fieldset class="space-y-0">
                     <legend class="sr-only">Rental details</legend>
-                    <x-field label="National ID / voter ID" name="national_id" :value="$customer?->national_id" />
-                    <x-field label="Passport number" name="passport_no" :value="$customer?->passport_no" />
-                    <x-field label="Driving licence number" name="driving_license_no" :value="$customer?->driving_license_no" />
-                    <x-field label="Date of birth" name="date_of_birth" type="date" :value="$customer?->date_of_birth?->format('Y-m-d')" />
-                    <x-field label="City" name="city" :value="$customer?->city" />
-                    <x-field label="Address" name="address" :value="$customer?->address" />
-                    <x-field label="Emergency contact name" name="emergency_contact_name" :value="$customer?->emergency_contact_name" />
+                    <x-field label="National ID / voter ID" name="national_id" :value="$customer?->national_id" pattern="[A-Za-z0-9]+([ /\-][A-Za-z0-9]+)*" maxlength="32" placeholder="e.g. 12345678" />
+                    <x-field label="Passport number" name="passport_no" :value="$customer?->passport_no" pattern="[A-Za-z0-9]+([ /\-][A-Za-z0-9]+)*" maxlength="32" placeholder="e.g. A1234567" />
+                    <x-field label="Driving licence number" name="driving_license_no" :value="$customer?->driving_license_no" pattern="[A-Za-z0-9]+([ /\-][A-Za-z0-9]+)*" maxlength="32" placeholder="e.g. DL-1234567" />
+                    <x-field label="Date of birth" name="date_of_birth" type="date" :value="$customer?->date_of_birth?->format('Y-m-d')" max="{{ now()->toDateString() }}" />
+                    <x-field label="City" name="city" :value="$customer?->city" maxlength="100" placeholder="e.g. Mwanza" />
+                    <x-field label="Address" name="address" :value="$customer?->address" maxlength="255" />
+                    <x-field label="Emergency contact name" name="emergency_contact_name" :value="$customer?->emergency_contact_name" pattern="[A-Za-z]{2,}.*" maxlength="255" placeholder="e.g. Ali Hamisi" />
                     <x-field label="Emergency contact phone" name="emergency_contact_phone" type="tel" :value="$customer?->emergency_contact_phone" pattern="0[0-9]{9}" inputmode="numeric" maxlength="10" placeholder="e.g. 0123456789" />
                 </fieldset>
             </x-card>

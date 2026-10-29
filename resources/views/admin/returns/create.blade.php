@@ -44,14 +44,14 @@
                 </div>
 
                 <x-field label="Mileage at return (km)" name="mileage_at_return" type="number"
-                         :value="$vehicle?->mileage" required />
-                <x-field label="Additional / damage charges (TZS)" name="additional_charges" type="number" :value="old('additional_charges', 0)" />
-                <x-field label="Late return charge (TZS)" name="late_fee" type="number" :value="old('late_fee', 0)"
+                         :value="$vehicle?->mileage" required min="0" step="1" max="99999999" />
+                <x-field label="Additional / damage charges (TZS)" name="additional_charges" type="number" :value="old('additional_charges', 0)" min="0" step="0.01" max="9999999999" />
+                <x-field label="Late return charge (TZS)" name="late_fee" type="number" :value="old('late_fee', 0)" min="0" step="0.01" max="9999999999"
                          :hint="'Expected back: '.optional($rental->end_date)->format('d M Y')" />
 
                 <div class="mb-4 sm:col-span-2 lg:col-span-3">
                     <label for="damage_notes" class="mb-1 block text-sm font-medium text-slate-700">Damage notes</label>
-                    <textarea id="damage_notes" name="damage_notes" rows="3"
+                    <textarea id="damage_notes" name="damage_notes" rows="3" maxlength="5000"
                               class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-emerald-500 focus:ring-emerald-500">{{ old('damage_notes') }}</textarea>
                     @error('damage_notes')<p class="mt-1 text-xs text-rose-600">{{ $message }}</p>@enderror
                 </div>

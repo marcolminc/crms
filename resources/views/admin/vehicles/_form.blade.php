@@ -4,11 +4,11 @@
 @endphp
 
 <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-    <x-field label="Plate Number" name="plate_number" :value="$vehicle->plate_number ?? ''" required />
-    <x-field label="Make" name="make" :value="$vehicle->make ?? ''" required />
-    <x-field label="Model" name="model" :value="$vehicle->model ?? ''" required />
+    <x-field label="Plate Number" name="plate_number" :value="$vehicle->plate_number ?? ''" required pattern="[A-Z0-9/\- ]{4,20}" maxlength="20" placeholder="e.g. DKA 1234" />
+    <x-field label="Make" name="make" :value="$vehicle->make ?? ''" required maxlength="60" />
+    <x-field label="Model" name="model" :value="$vehicle->model ?? ''" required maxlength="60" />
 
-    <x-field label="Year" name="year" type="number" :value="$vehicle->year ?? ''" required />
+    <x-field label="Year" name="year" type="number" :value="$vehicle->year ?? ''" required min="1980" max="{{ date('Y') + 1 }}" step="1" />
     <div class="mb-4">
         <label for="type" class="mb-1 block text-sm font-medium text-slate-700">Type <span class="text-rose-600">*</span></label>
         <select id="type" name="type" class="{{ $selectClass }}" required>
@@ -20,7 +20,7 @@
             <p class="mt-1 text-xs text-rose-600">{{ $message }}</p>
         @enderror
     </div>
-    <x-field label="Seats" name="seats" type="number" :value="$vehicle->seats ?? 5" />
+    <x-field label="Seats" name="seats" type="number" :value="$vehicle->seats ?? 5" min="1" max="60" step="1" />
 
     <div class="mb-4">
         <label for="transmission" class="mb-1 block text-sm font-medium text-slate-700">Transmission <span class="text-rose-600">*</span></label>
@@ -44,10 +44,10 @@
             <p class="mt-1 text-xs text-rose-600">{{ $message }}</p>
         @enderror
     </div>
-    <x-field label="Colour" name="colour" :value="$vehicle->colour ?? ''" />
+    <x-field label="Colour" name="colour" :value="$vehicle->colour ?? ''" maxlength="40" />
 
-    <x-field label="Mileage (km)" name="mileage" type="number" :value="$vehicle->mileage ?? ''" />
-    <x-field label="Rate Per Day (TZS)" name="rate_per_day" type="number" :value="$vehicle->rate_per_day ?? ''" required />
+    <x-field label="Mileage (km)" name="mileage" type="number" :value="$vehicle->mileage ?? ''" min="0" step="1" max="99999999" />
+    <x-field label="Rate Per Day (TZS)" name="rate_per_day" type="number" :value="$vehicle->rate_per_day ?? ''" required min="1" step="0.01" max="9999999999" placeholder="e.g. 80000" />
     <div class="mb-4">
         <label for="status" class="mb-1 block text-sm font-medium text-slate-700">Status</label>
         <select id="status" name="status" class="{{ $selectClass }}">
@@ -80,13 +80,13 @@
     </div>
 
     <div class="mb-4 sm:col-span-2">
-        <x-field label="Features" name="features" :value="implode(', ', $vehicle->features ?? [])" placeholder="Air conditioning, GPS, Baby seat" />
+        <x-field label="Features" name="features" :value="implode(', ', $vehicle->features ?? [])" maxlength="2000" placeholder="Air conditioning, GPS, Baby seat" />
         <p class="-mt-3 text-xs text-slate-500">Separate multiple features with commas.</p>
     </div>
 
     <div class="mb-4 sm:col-span-2 lg:col-span-3">
         <label for="description" class="mb-1 block text-sm font-medium text-slate-700">Description</label>
-        <textarea id="description" name="description" rows="3" class="{{ $textareaClass }}">{{ old('description', $vehicle->description ?? '') }}</textarea>
+        <textarea id="description" name="description" rows="3" maxlength="5000" class="{{ $textareaClass }}">{{ old('description', $vehicle->description ?? '') }}</textarea>
         @error('description')
             <p class="mt-1 text-xs text-rose-600">{{ $message }}</p>
         @enderror

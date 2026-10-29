@@ -66,13 +66,13 @@
                     </div>
 
                     <x-field label="Transaction reference" name="transaction_reference"
-                             placeholder="M-Pesa / Tigo Pesa confirmation code" />
+                             maxlength="60" placeholder="M-Pesa / Tigo Pesa confirmation code" />
 
                     <x-field label="Paid on" name="paid_at" type="date" :value="now()->format('Y-m-d')" />
 
                     <div class="mb-4 sm:col-span-2">
                         <label for="notes" class="mb-1 block text-sm font-medium text-slate-700">Notes</label>
-                        <textarea id="notes" name="notes" rows="3"
+                        <textarea id="notes" name="notes" rows="3" maxlength="2000"
                                   class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-emerald-500 focus:ring-emerald-500">{{ old('notes') }}</textarea>
                         @error('notes')
                             <p class="mt-1 text-xs text-rose-600">{{ $message }}</p>

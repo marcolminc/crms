@@ -37,8 +37,8 @@
                 </div>
 
                 <div class="grid gap-4 sm:grid-cols-2">
-                    <x-field label="Pick-up date" name="start_date" type="date" :value="$from" required />
-                    <x-field label="Drop-off date" name="end_date" type="date" :value="$to" required />
+                    <x-field label="Pick-up date" name="start_date" type="date" :value="$from" required min="{{ now()->toDateString() }}" />
+                    <x-field label="Drop-off date" name="end_date" type="date" :value="$to" required min="{{ now()->toDateString() }}" />
                 </div>
 
                 {{-- FR15: optional office driver (chauffeur) chosen at booking --}}
@@ -57,7 +57,7 @@
 
                 <div class="mb-4">
                     <label for="notes" class="mb-1 block text-sm font-medium text-slate-700">Notes (optional)</label>
-                    <textarea id="notes" name="notes" rows="4"
+                    <textarea id="notes" name="notes" rows="4" maxlength="2000"
                               class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm shadow-sm">{{ old('notes') }}</textarea>
                     @error('notes')
                         <p class="mt-1 text-xs text-rose-600">{{ $message }}</p>

@@ -17,12 +17,12 @@
             <p class="mt-1 text-xs text-rose-600">{{ $message }}</p>
         @enderror
     </div>
-    <x-field label="Work Title" name="title" :value="$maintenance->title ?? ''" required />
-    <x-field label="Service Provider" name="service_provider" :value="$maintenance->service_provider ?? ''" />
+    <x-field label="Work Title" name="title" :value="$maintenance->title ?? ''" required maxlength="255" />
+    <x-field label="Service Provider" name="service_provider" :value="$maintenance->service_provider ?? ''" maxlength="255" />
 
     <x-field label="Start Date" name="start_date" type="date" :value="$maintenance?->start_date?->format('Y-m-d') ?? ''" required />
     <x-field label="End Date" name="end_date" type="date" :value="$maintenance?->end_date?->format('Y-m-d') ?? ''" />
-    <x-field label="Cost (TZS)" name="cost" type="number" :value="$maintenance->cost ?? ''" />
+    <x-field label="Cost (TZS)" name="cost" type="number" :value="$maintenance->cost ?? ''" min="0" step="0.01" />
 
     <div class="mb-4">
         <label for="status" class="mb-1 block text-sm font-medium text-slate-700">Status <span class="text-rose-600">*</span></label>
@@ -38,7 +38,7 @@
 
     <div class="mb-4 sm:col-span-2 lg:col-span-3">
         <label for="description" class="mb-1 block text-sm font-medium text-slate-700">Description</label>
-        <textarea id="description" name="description" rows="3"
+        <textarea id="description" name="description" rows="3" maxlength="5000"
                   class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-emerald-500 focus:ring-emerald-500">{{ old('description', $maintenance->description ?? '') }}</textarea>
         @error('description')
             <p class="mt-1 text-xs text-rose-600">{{ $message }}</p>

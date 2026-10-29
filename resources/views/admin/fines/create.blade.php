@@ -13,10 +13,10 @@
             <form method="POST" action="{{ route('admin.fines.store', $rental) }}" class="space-y-4">
                 @csrf
                 <div class="grid gap-4 sm:grid-cols-2">
-                    <x-field label="Reference" name="reference" :value="old('reference')" placeholder="Authority / ticket no." />
-                    <x-field label="Amount (TZS)" name="amount" type="number" step="0.01" min="0" :value="old('amount')" required />
+                    <x-field label="Reference" name="reference" :value="old('reference')" maxlength="120" placeholder="Authority / ticket no." />
+                    <x-field label="Amount (TZS)" name="amount" type="number" step="0.01" min="0.01" max="9999999999" :value="old('amount')" required />
                 </div>
-                <x-field label="Offence" name="description" :value="old('description')" placeholder="e.g. Speeding, red light" />
+                <x-field label="Offence" name="description" :value="old('description')" maxlength="1000" placeholder="e.g. Speeding, red light" />
                 <div>
                     <label for="issued_at" class="mb-1 block text-sm font-medium text-slate-700">Issued on</label>
                     <input type="date" id="issued_at" name="issued_at" value="{{ old('issued_at') }}"
@@ -24,7 +24,7 @@
                 </div>
                 <div>
                     <label for="notes" class="mb-1 block text-sm font-medium text-slate-700">Notes</label>
-                    <textarea id="notes" name="notes" rows="3"
+                    <textarea id="notes" name="notes" rows="3" maxlength="2000"
                               class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-emerald-500 focus:ring-emerald-500">{{ old('notes') }}</textarea>
                 </div>
                 <button type="submit" class="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700">Add fine</button>
