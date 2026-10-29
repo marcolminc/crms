@@ -72,4 +72,18 @@ class NotificationService
             ->pluck('id')
             ->all();
     }
+
+    /**
+     * The administrator accounts. Only genuinely administrative work is routed
+     * here - account recovery, system incidents - never the day-to-day booking,
+     * fleet or hire-desk traffic, which belongs to the operational roles.
+     */
+    public function administrators(): array
+    {
+        return User::query()
+            ->where('role', UserRole::Admin)
+            ->where('is_active', true)
+            ->pluck('id')
+            ->all();
+    }
 }

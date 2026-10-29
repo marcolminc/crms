@@ -3,6 +3,9 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Models\User;
+use App\Services\AuditLogger;
+use App\Services\NotificationService;
 use Illuminate\Auth\Events\PasswordReset as PasswordResetEvent;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -23,7 +26,7 @@ final class PasswordResetController extends Controller
         return view('auth.forgot-password');
     }
 
-    public function store(Request $request)
+    public function store(Request $request, NotificationService $notifications, AuditLogger $audit)
     {
         $request->validate([
             'email' => ['required', 'string', 'email', 'exists:users,email'],
@@ -35,6 +38,25 @@ final class PasswordResetController extends Controller
 
         if ($status !== Password::RESET_LINK_SENT) {
             throw ValidationException::withMessages(['email' => 'We could not send the reset link. Please try again shortly.']);
+        }
+
+        // Email delivery may be unavailable (sandbox / no SMTP), so an
+        // administrator is always alerted that someone asked to recover their
+        // account. This is administration work (managing user accounts), and the
+        // admin can set a new password from the account edit page to demonstrate
+        // the change-of-password process end to end.
+        $account = User::query()->where('email', $request->input('email'))->first();
+
+        if ($account !== null) {
+            $notifications->forUsers(
+                $notifications->administrators(),
+                'Password reset requested',
+                $account->name.' ('.$account->email.') asked to reset their password. Open the account to set a new password so they can sign in.',
+                route('admin.users.edit', $account),
+                'password_reset_requested',
+            );
+
+            $audit->log('auth.password_reset_requested', "Password reset requested for {$account->email}.", $account, [], null);
         }
 
         return back()->with('status', 'A password reset link has been sent to '.$request->input('email').'. Check your inbox (and spam folder).');

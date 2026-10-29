@@ -52,6 +52,32 @@ class Fr1AuthenticationTest extends TestCase
         Notification::assertNothingSent();
     }
 
+    public function test_a_password_reset_request_alerts_the_administrator(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $customer = User::factory()->customer()->create(['name' => 'Neema Joseph']);
+
+        $this->post('/forgot-password', ['email' => $customer->email])
+            ->assertSessionHasNoErrors();
+
+        $alert = $admin->notifications()->where('type', 'password_reset_requested')->first();
+        $this->assertNotNull($alert);
+        $this->assertStringContainsString('Neema Joseph', $alert->message);
+
+        $this->assertDatabaseHas('audit_logs', ['action' => 'auth.password_reset_requested']);
+    }
+
+    public function test_operational_staff_are_not_told_about_password_reset_requests(): void
+    {
+        $counterAgent = User::factory()->counterAgent()->create();
+        $customer = User::factory()->customer()->create();
+
+        $this->post('/forgot-password', ['email' => $customer->email])
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame(0, $counterAgent->notifications()->where('type', 'password_reset_requested')->count());
+    }
+
     public function test_a_valid_token_lets_the_user_set_a_new_password(): void
     {
         $user = User::factory()->customer()->create(['password' => 'OldPass123']);
