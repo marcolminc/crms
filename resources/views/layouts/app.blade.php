@@ -81,7 +81,7 @@
 @endphp
 <div class="min-h-full">
     <nav class="sticky top-0 z-40 border-b border-slate-200 bg-white/95 shadow-sm backdrop-blur">
-        <div class="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-2.5 sm:px-6">
+        <div class="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-2 sm:px-6">
             <div class="flex items-center gap-3">
                 @if ($user !== null && ! empty($groups))
                     <div class="relative" data-menu-root>
@@ -122,7 +122,7 @@
                 <a href="{{ $user?->isStaff() ? route('admin.dashboard') : ($user?->isDriver() ? route('notifications.index') : route('customer.dashboard')) }}"
                    class="flex items-center gap-2.5">
                     <img src="{{ asset('logo.png') }}" alt="{{ config('app.name') }} logo"
-                         class="h-14 w-auto sm:h-16">
+                         class="h-9 w-auto sm:h-11">
                 </a>
             </div>
 

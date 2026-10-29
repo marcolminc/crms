@@ -10,9 +10,9 @@
 <body class="h-full bg-slate-50 text-slate-900 antialiased">
 <div class="min-h-full">
     <header class="sticky top-0 z-40 border-b border-slate-200 bg-white/95 shadow-sm backdrop-blur">
-        <div class="mx-auto flex max-w-5xl items-center justify-between px-4 py-3 sm:px-6">
+        <div class="mx-auto flex max-w-5xl items-center justify-between px-4 py-2 sm:px-6">
             <a href="{{ route('home') }}" class="flex items-center">
-                <img src="{{ asset('logo.png') }}" alt="{{ config('app.name') }} logo" class="h-14 w-auto sm:h-16">
+                <img src="{{ asset('logo.png') }}" alt="{{ config('app.name') }} logo" class="h-9 w-auto sm:h-11">
             </a>
             <div class="hidden min-w-0 flex-1 items-center justify-center md:flex">
                 <span class="truncate text-lg font-bold tracking-tight text-slate-900">Land Valley&rsquo;s Travels</span>
