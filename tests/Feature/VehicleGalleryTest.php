@@ -41,50 +41,81 @@ class VehicleGalleryTest extends TestCase
         return UploadedFile::fake()->create($name, 120, 'image/jpeg');
     }
 
-    public function test_staff_can_upload_photos_when_adding_a_vehicle(): void
+    public function test_staff_fill_named_slots_when_adding_a_vehicle(): void
     {
         Storage::fake('public');
 
         $this->actingAs($this->staff())
             ->post('/admin/vehicles', $this->vehiclePayload([
-                'photos' => [$this->jpeg('front.jpg'), $this->jpeg('side.jpg')],
+                'photos' => ['front' => $this->jpeg('front.jpg'), 'interior' => $this->jpeg('cabin.jpg')],
             ]))
             ->assertSessionHas('status');
 
         $vehicle = Vehicle::query()->firstOrFail();
-        $gallery = $vehicle->gallery();
-        $this->assertCount(2, $gallery);
-        $this->assertStringStartsWith('vehicles/', $gallery[0]);
-        Storage::disk('public')->assertExists($gallery[0]);
-        Storage::disk('public')->assertExists($gallery[1]);
+        $this->assertSame(['front', 'interior'], array_keys($vehicle->images));
+        $this->assertStringStartsWith('vehicles/', $vehicle->images['front']);
+        Storage::disk('public')->assertExists($vehicle->images['front']);
+        Storage::disk('public')->assertExists($vehicle->images['interior']);
     }
 
-    public function test_update_keeps_the_gallery_and_deletes_removed_photos(): void
+    public function test_slots_keep_their_order_and_labels_in_the_gallery(): void
+    {
+        $vehicle = Vehicle::factory()->create([
+            'images' => ['interior' => 'vehicles/cabin.jpg', 'front' => 'vehicles/nose.jpg'],
+        ]);
+
+        $gallery = $vehicle->gallery();
+        $this->assertSame(['front', 'interior'], array_column($gallery, 'slot'));
+        $this->assertSame(['Front', 'Interior'], array_column($gallery, 'label'));
+        $this->assertSame(['vehicles/nose.jpg', 'vehicles/cabin.jpg'], array_column($gallery, 'path'));
+    }
+
+    public function test_update_removes_a_slot_and_fills_another(): void
     {
         Storage::fake('public');
 
-        $first = 'vehicles/first.jpg';
-        $second = 'vehicles/second.jpg';
-        Storage::disk('public')->put($first, 'old-one');
-        Storage::disk('public')->put($second, 'old-two');
-        $vehicle = Vehicle::factory()->create(['images' => [$first, $second]]);
+        $front = 'vehicles/old-front.jpg';
+        $back = 'vehicles/old-back.jpg';
+        Storage::disk('public')->put($front, 'old-one');
+        Storage::disk('public')->put($back, 'old-two');
+        $vehicle = Vehicle::factory()->create(['images' => ['front' => $front, 'back' => $back]]);
 
         $this->actingAs($this->staff())
             ->put(route('admin.vehicles.update', $vehicle), $this->vehiclePayload([
                 'plate_number' => $vehicle->plate_number,
-                'remove_images' => [$first],
-                'photos' => [$this->jpeg('interior.jpg')],
+                'remove_images' => [$front],
+                'photos' => ['side' => $this->jpeg('profile.jpg')],
             ]))
             ->assertSessionHas('status');
 
-        $gallery = $vehicle->fresh()->gallery();
-        $this->assertNotContains($first, $gallery);
-        $this->assertContains($second, $gallery);
-        $this->assertCount(2, $gallery);
-        Storage::disk('public')->assertMissing($first);
-        Storage::disk('public')->assertExists($second);
-        $this->assertStringStartsWith('vehicles/', $gallery[1]);
-        Storage::disk('public')->assertExists($gallery[1]);
+        $images = $vehicle->fresh()->images;
+        $this->assertSame(['back', 'side'], array_keys($images));
+        $this->assertSame($back, $images['back']);
+        Storage::disk('public')->assertMissing($front);
+        Storage::disk('public')->assertExists($back);
+        Storage::disk('public')->assertExists($images['side']);
+    }
+
+    public function test_uploading_into_a_filled_slot_replaces_and_deletes_the_old_photo(): void
+    {
+        Storage::fake('public');
+
+        $old = 'vehicles/before.jpg';
+        Storage::disk('public')->put($old, 'pixel');
+        $vehicle = Vehicle::factory()->create(['images' => ['front' => $old]]);
+
+        $this->actingAs($this->staff())
+            ->put(route('admin.vehicles.update', $vehicle), $this->vehiclePayload([
+                'plate_number' => $vehicle->plate_number,
+                'photos' => ['front' => $this->jpeg('after.jpg')],
+            ]))
+            ->assertSessionHas('status');
+
+        $images = $vehicle->fresh()->images;
+        $this->assertSame(['front'], array_keys($images));
+        $this->assertNotSame($old, $images['front']);
+        Storage::disk('public')->assertMissing($old);
+        Storage::disk('public')->assertExists($images['front']);
     }
 
     public function test_removals_are_matched_against_the_gallery_only(): void
@@ -93,7 +124,7 @@ class VehicleGalleryTest extends TestCase
 
         $kept = 'vehicles/kept.jpg';
         Storage::disk('public')->put($kept, 'keep-me');
-        $vehicle = Vehicle::factory()->create(['images' => [$kept]]);
+        $vehicle = Vehicle::factory()->create(['images' => ['front' => $kept]]);
 
         $this->actingAs($this->staff())
             ->put(route('admin.vehicles.update', $vehicle), $this->vehiclePayload([
@@ -101,48 +132,53 @@ class VehicleGalleryTest extends TestCase
                 'remove_images' => ['vehicles/not-in-the-gallery.jpg'],
             ]));
 
-        $this->assertSame([$kept], $vehicle->fresh()->gallery());
+        $this->assertSame(['front' => $kept], $vehicle->fresh()->images);
         Storage::disk('public')->assertExists($kept);
     }
 
-    public function test_the_gallery_is_capped_at_six_photos(): void
-    {
-        Storage::fake('public');
-
-        $paths = [];
-        for ($i = 1; $i <= Vehicle::MAX_PHOTOS; $i++) {
-            $paths[] = "vehicles/full-{$i}.jpg";
-            Storage::disk('public')->put($paths[$i - 1], 'x');
-        }
-        $vehicle = Vehicle::factory()->create(['images' => $paths]);
-
-        $this->actingAs($this->staff())
-            ->put(route('admin.vehicles.update', $vehicle), $this->vehiclePayload([
-                'plate_number' => $vehicle->plate_number,
-                'photos' => [$this->jpeg('one-too-many.jpg')],
-            ]))
-            ->assertSessionHas('error');
-
-        $this->assertSame($paths, $vehicle->fresh()->gallery());
-    }
-
-    public function test_non_image_uploads_are_refused(): void
+    public function test_uploads_into_unknown_slots_are_ignored(): void
     {
         Storage::fake('public');
 
         $this->actingAs($this->staff())
             ->post('/admin/vehicles', $this->vehiclePayload([
-                'photos' => [UploadedFile::fake()->create('invoice.pdf', 10, 'application/pdf')],
+                'photos' => ['hood' => $this->jpeg('hood.jpg'), 'front' => $this->jpeg('front.jpg')],
             ]))
-            ->assertSessionHasErrors('photos.0');
+            ->assertSessionHas('status');
+
+        $vehicle = Vehicle::query()->firstOrFail();
+        $this->assertSame(['front'], array_keys($vehicle->images));
+    }
+
+    public function test_a_non_image_in_a_slot_is_refused_by_name(): void
+    {
+        Storage::fake('public');
+
+        $this->actingAs($this->staff())
+            ->post('/admin/vehicles', $this->vehiclePayload([
+                'photos' => ['interior' => UploadedFile::fake()->create('invoice.pdf', 10, 'application/pdf')],
+            ]))
+            ->assertSessionHasErrors('photos.interior');
 
         $this->assertDatabaseCount('vehicles', 0);
     }
 
-    public function test_browse_cards_show_a_carousel_for_photoed_vehicles_and_a_fallback_without_photos(): void
+    public function test_a_legacy_list_gallery_is_rekeyed_onto_slots(): void
+    {
+        $vehicle = Vehicle::factory()->create([
+            'images' => ['vehicles/one.jpg', 'vehicles/two.jpg'],
+        ]);
+
+        $this->assertSame(
+            ['front' => 'vehicles/one.jpg', 'side' => 'vehicles/two.jpg'],
+            $vehicle->photoMap(),
+        );
+    }
+
+    public function test_browse_cards_caption_their_carousel_slots(): void
     {
         $withPhotos = Vehicle::factory()->available()->create([
-            'images' => ['vehicles/a.jpg', 'vehicles/b.jpg'],
+            'images' => ['front' => 'vehicles/a.jpg', 'interior' => 'vehicles/b.jpg'],
         ]);
         $withoutPhotos = Vehicle::factory()->available()->create(['images' => null]);
 
@@ -150,6 +186,8 @@ class VehicleGalleryTest extends TestCase
             ->assertOk()
             ->assertSee('data-carousel', false)
             ->assertSee('2 photos')
+            ->assertSee('Front')
+            ->assertSee('Interior')
             ->assertSee('No photos yet')
             ->assertSee($withPhotos->plate_number)
             ->assertSee($withoutPhotos->plate_number);
@@ -167,17 +205,19 @@ class VehicleGalleryTest extends TestCase
         $this->assertStringNotContainsString('data-interval', $html);
     }
 
-    public function test_detail_page_carries_the_gallery_into_the_hero(): void
+    public function test_detail_page_carries_the_captioned_gallery_into_the_hero(): void
     {
         $vehicle = Vehicle::factory()->available()->create([
-            'images' => ['vehicles/hero-1.jpg', 'vehicles/hero-2.jpg'],
+            'images' => ['front' => 'vehicles/hero-1.jpg', 'back' => 'vehicles/hero-2.jpg'],
         ]);
 
         $this->get(route('vehicles.show', $vehicle))
             ->assertOk()
             ->assertSee('data-carousel', false)
             ->assertSee('vehicles/hero-1.jpg')
-            ->assertSee('vehicles/hero-2.jpg');
+            ->assertSee('vehicles/hero-2.jpg')
+            ->assertSee('data-slide-label="Front"', false)
+            ->assertSee('data-slide-label="Back"', false);
     }
 
     public function test_the_partial_endpoint_streams_the_next_page_of_cards(): void

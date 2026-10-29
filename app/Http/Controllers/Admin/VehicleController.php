@@ -62,11 +62,14 @@ final class VehicleController extends Controller
         $data['features'] = $this->parseFeatures($data['features'] ?? null);
         $data['status'] = $data['status'] ?? VehicleStatus::Available->value;
 
-        $uploaded = array_map(
-            fn (UploadedFile $file): string => $file->store('vehicles', 'public'),
-            $this->uploadedPhotos($request),
-        );
-        $data['images'] = $uploaded === [] ? null : array_values($uploaded);
+        $images = [];
+        foreach (array_keys(Vehicle::SLOTS) as $slot) {
+            $file = $request->file("photos.$slot");
+            if ($file instanceof UploadedFile) {
+                $images[$slot] = $file->store('vehicles', 'public');
+            }
+        }
+        $data['images'] = $images === [] ? null : $images;
 
         Vehicle::create($data);
 
@@ -88,24 +91,30 @@ final class VehicleController extends Controller
         unset($data['photos'], $data['remove_images']);
         $data['features'] = $this->parseFeatures($data['features'] ?? null);
 
-        $existing = $vehicle->gallery();
-        $removals = array_values(array_filter(
-            array_map(fn ($p): ?string => is_string($p) ? $p : null, (array) $request->input('remove_images', [])),
-            fn (string $path): bool => in_array($path, $existing, true),
-        ));
-        $kept = array_values(array_diff($existing, $removals));
-        $files = $this->uploadedPhotos($request);
+        $map = $vehicle->photoMap();
+        $removals = [];
 
-        if (count($kept) + count($files) > Vehicle::MAX_PHOTOS) {
-            return redirect()->back()->withInput()->with(
-                'error',
-                'A vehicle carries at most '.Vehicle::MAX_PHOTOS.' photos — remove some before adding more.',
-            );
+        // Ticked tiles drop their slot; anything unknown is ignored.
+        foreach ((array) $request->input('remove_images', []) as $path) {
+            $slot = is_string($path) ? array_search($path, $map, true) : false;
+            if ($slot !== false) {
+                unset($map[$slot]);
+                $removals[] = $path;
+            }
         }
 
-        $uploaded = array_map(fn (UploadedFile $file): string => $file->store('vehicles', 'public'), $files);
-        $gallery = array_merge($kept, $uploaded);
-        $data['images'] = $gallery === [] ? null : array_values($gallery);
+        // A fresh file in a filled slot replaces the old photo outright.
+        foreach (array_keys(Vehicle::SLOTS) as $slot) {
+            $file = $request->file("photos.$slot");
+            if ($file instanceof UploadedFile) {
+                if (isset($map[$slot])) {
+                    $removals[] = $map[$slot];
+                }
+                $map[$slot] = $file->store('vehicles', 'public');
+            }
+        }
+
+        $data['images'] = $map === [] ? null : $map;
 
         $vehicle->update($data);
         $this->deletePhotos($removals);
@@ -179,19 +188,6 @@ final class VehicleController extends Controller
         $items = array_filter(array_map('trim', explode(',', $features)), fn ($item) => $item !== '');
 
         return $items === [] ? null : array_values($items);
-    }
-
-    /**
-     * @return list<UploadedFile>
-     */
-    private function uploadedPhotos(StoreVehicleRequest $request): array
-    {
-        $files = $request->file('photos') ?? [];
-
-        return array_values(array_filter(
-            is_array($files) ? $files : [$files],
-            fn ($file): bool => $file instanceof UploadedFile && $file->isValid(),
-        ));
     }
 
     /**

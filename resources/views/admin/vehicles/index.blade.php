@@ -79,9 +79,13 @@
                     @forelse ($vehicles as $vehicle)
                         <tr>
                             <td class="py-3 pr-4">
-                                @if ($vehicle->hasPhotos())
-                                    <img src="{{ $vehicle->photoUrl($vehicle->gallery()[0]) }}"
-                                         alt="" class="h-12 w-20 rounded-md object-cover">
+                                @php $cover = $vehicle->gallery()[0] ?? null; @endphp
+                                @if ($cover)
+                                    <img src="{{ $vehicle->photoUrl($cover['path']) }}"
+                                         alt="{{ $cover['label'] !== '' ? $cover['label'].' photo' : '' }}" class="h-12 w-20 rounded-md object-cover">
+                                    @if ($cover['label'] !== '')
+                                        <span class="mt-1 block text-[10px] uppercase tracking-wide text-slate-400">{{ $cover['label'] }}</span>
+                                    @endif
                                 @else
                                     <div class="flex h-12 w-20 items-center justify-center rounded-md bg-slate-100 text-[10px] font-medium text-slate-400">None</div>
                                 @endif

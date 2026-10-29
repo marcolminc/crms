@@ -7,9 +7,10 @@ use Illuminate\Support\Facades\Schema;
 return new class extends Migration
 {
     /**
-     * A vehicle now carries a photo gallery (front, back, side, interior shots)
-     * rather than the single legacy image_path. Paths are relative to the
-     * public disk, e.g. "vehicles/ab12cd.jpg".
+     * A vehicle now carries a photo gallery rather than the single legacy
+     * image_path. The JSON holds a map of named slot => path on the public
+     * disk, e.g. {"front": "vehicles/ab12cd.jpg", "interior": ...}, so the
+     * database always knows which angle each photo shows.
      */
     public function up(): void
     {

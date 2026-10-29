@@ -66,41 +66,50 @@
         @enderror
     </div>
 
-    <div class="mb-4 sm:col-span-2 lg:col-span-3"
-         data-photo-manager
-         data-photo-max="{{ \App\Models\Vehicle::MAX_PHOTOS }}"
-         data-photo-current="{{ $vehicle ? count($vehicle->gallery()) : 0 }}">
-        <label for="photos" class="mb-1 block text-sm font-medium text-slate-700">Photos</label>
-
-        @if ($vehicle && $vehicle->hasPhotos())
-            <p class="mb-2 text-xs text-slate-500">Tick a photo to remove it when you save.</p>
-            <div class="mb-3 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-                @foreach ($vehicle->gallery() as $photo)
-                    <label class="group relative block cursor-pointer overflow-hidden rounded-lg border border-slate-200">
-                        <img src="{{ $vehicle->photoUrl($photo) }}" alt="" class="aspect-[4/3] w-full object-cover transition group-hover:opacity-60">
-                        <input type="checkbox" name="remove_images[]" value="{{ $photo }}" class="peer sr-only">
-                        <span class="pointer-events-none absolute inset-0 hidden items-center justify-center bg-rose-600/80 text-xs font-semibold text-white peer-checked:flex">
-                            Remove
-                        </span>
-                    </label>
-                @endforeach
-            </div>
-        @endif
-
-        <input type="file" id="photos" name="photos[]" multiple accept="image/jpeg,image/png,image/webp"
-               class="block w-full text-sm text-slate-600 file:mr-3 file:rounded-lg file:border-0 file:bg-emerald-600 file:px-4 file:py-2 file:text-sm file:font-medium file:text-white hover:file:bg-emerald-700">
-        <p class="mt-1 text-xs text-slate-500">
-            Show the car from every angle &mdash; front, back, side and interior. Up to
-            {{ \App\Models\Vehicle::MAX_PHOTOS }} photos, 4 MB each (JPG, PNG or WebP).
+    @php
+        $photoMap = $vehicle?->photoMap() ?? [];
+    @endphp
+    <div class="mb-4 sm:col-span-2 lg:col-span-3" data-photo-manager>
+        <label class="mb-1 block text-sm font-medium text-slate-700">Photos</label>
+        <p class="mb-3 text-xs text-slate-500">
+            One shot per angle &mdash; the browse carousel captions itself from these slots.
+            Uploading into a filled slot replaces its photo. JPG, PNG or WebP, 4 MB each.
         </p>
-        <div class="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-6" data-photo-preview></div>
 
-        @error('photos')
-            <p class="mt-1 text-xs text-rose-600">{{ $message }}</p>
-        @enderror
-        @foreach ($errors->get('photos.*') as $messages)
-            <p class="mt-1 text-xs text-rose-600">{{ $messages[0] }}</p>
-        @endforeach
+        <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+            @foreach (\App\Models\Vehicle::SLOTS as $slot => $slotLabel)
+                <div class="rounded-lg border border-slate-200 bg-slate-50/60 p-2" data-slot="{{ $slot }}">
+                    <p class="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-slate-500">{{ $slotLabel }}</p>
+
+                    @if (isset($photoMap[$slot]))
+                        <label class="group relative mb-2 block cursor-pointer overflow-hidden rounded-lg border border-slate-200">
+                            <img src="{{ $vehicle->photoUrl($photoMap[$slot]) }}" alt="Current {{ $slotLabel }} photo"
+                                 class="aspect-[4/3] w-full object-cover transition group-hover:opacity-60">
+                            <input type="checkbox" name="remove_images[]" value="{{ $photoMap[$slot] }}" class="peer sr-only" data-slot-remove>
+                            <span class="pointer-events-none absolute inset-0 hidden items-center justify-center bg-rose-600/80 text-xs font-semibold text-white peer-checked:flex">
+                                Remove
+                            </span>
+                        </label>
+                    @endif
+
+                    <input type="file" name="photos[{{ $slot }}"] accept="image/jpeg,image/png,image/webp"
+                           class="hidden" data-slot-upload>
+                    <button type="button" data-slot-pick
+                            class="w-full rounded-lg border border-dashed border-slate-300 px-2 py-1.5 text-xs font-medium text-slate-600 hover:border-emerald-400 hover:text-emerald-700">
+                        {{ isset($photoMap[$slot]) ? 'Replace photo' : 'Choose photo' }}
+                    </button>
+
+                    <div class="mt-2 hidden overflow-hidden rounded-lg border border-emerald-300" data-slot-preview>
+                        <img src="" alt="New {{ $slotLabel }} photo preview" class="aspect-[4/3] w-full object-cover">
+                        <p class="truncate bg-emerald-600/90 px-1.5 py-0.5 text-[10px] font-medium text-white" data-slot-preview-name></p>
+                    </div>
+
+                    @error("photos.$slot")
+                        <p class="mt-1 text-xs text-rose-600">{{ $message }}</p>
+                    @enderror
+                </div>
+            @endforeach
+        </div>
     </div>
 
     <div class="mb-4 sm:col-span-2">

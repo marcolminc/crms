@@ -18,10 +18,15 @@
     @else
         <div class="flex h-full w-full transition-transform duration-700 ease-out will-change-transform" data-carousel-track>
             @foreach ($photos as $index => $photo)
-                <img src="{{ $vehicle->photoUrl($photo) }}"
-                     alt="{{ $name }} — photo {{ $index + 1 }} of {{ $count }}"
-                     class="h-full w-full flex-none object-cover"
-                     loading="{{ ($eager && $index === 0) ? 'eager' : 'lazy' }}">
+                <div class="relative h-full w-full flex-none" data-slide-label="{{ $photo['label'] }}">
+                    <img src="{{ $vehicle->photoUrl($photo['path']) }}"
+                         alt="{{ $name }}{{ $photo['label'] !== '' ? ' — '.$photo['label'] : ' — photo '.($index + 1).' of '.$count }}"
+                         class="h-full w-full object-cover"
+                         loading="{{ ($eager && $index === 0) ? 'eager' : 'lazy' }}">
+                    @if ($photo['label'] !== '')
+                        <span class="absolute bottom-2 left-2 rounded-full bg-slate-900/55 px-2 py-0.5 text-[11px] font-medium uppercase tracking-wide text-white">{{ $photo['label'] }}</span>
+                    @endif
+                </div>
             @endforeach
         </div>
 

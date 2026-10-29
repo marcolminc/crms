@@ -40,10 +40,15 @@ function initCarousels(root = document) {
         let index = 0;
         let timer = null;
 
+        // Dots double as angle shortcuts: "Front", "Interior", ...
+        const labels = [...track.children].map((slide) => slide.dataset.slideLabel || '');
+
         for (let d = 0; d < total; d += 1) {
             const button = document.createElement('button');
             button.type = 'button';
-            button.setAttribute('aria-label', `Show photo ${d + 1} of ${total}`);
+            button.setAttribute('aria-label', labels[d]
+                ? `Show ${labels[d]} photo`
+                : `Show photo ${d + 1} of ${total}`);
             button.addEventListener('click', () => {
                 show(d);
                 restart();
@@ -271,72 +276,45 @@ function initInfiniteScroll() {
 }
 
 // ---------------------------------------------------------------------------
-// Admin photo picker preview
+// Admin photo slot picker
 // ---------------------------------------------------------------------------
 
 function initPhotoManager() {
-    const manager = document.querySelector('[data-photo-manager]');
+    document.querySelectorAll('[data-photo-manager] [data-slot]').forEach((slot) => {
+        const input = slot.querySelector('input[type="file"]');
+        const pick = slot.querySelector('[data-slot-pick]');
+        const preview = slot.querySelector('[data-slot-preview]');
+        const previewImg = preview ? preview.querySelector('img') : null;
+        const previewName = preview ? preview.querySelector('[data-slot-preview-name]') : null;
+        const removeBox = slot.querySelector('[data-slot-remove]');
 
-    if (!manager) {
-        return;
-    }
-
-    const input = manager.querySelector('input[type="file"][name="photos[]"]');
-    const preview = manager.querySelector('[data-photo-preview]');
-    const max = parseInt(manager.dataset.photoMax || '6', 10);
-
-    if (!input || !preview) {
-        return;
-    }
-
-    function keptTiles() {
-        return manager.querySelectorAll('input[name="remove_images[]"]:not(:checked)').length;
-    }
-
-    function render() {
-        preview.innerHTML = '';
-        manager.querySelectorAll('[data-photo-warning]').forEach((el) => el.remove());
-
-        const files = [...input.files];
-
-        if (files.length === 0) {
+        if (!input || !pick || !preview) {
             return;
         }
 
-        const room = Math.max(0, max - keptTiles());
+        pick.addEventListener('click', () => input.click());
 
-        files.forEach((file, i) => {
-            const tile = document.createElement('div');
-            tile.className = `relative overflow-hidden rounded-lg border ${i >= room ? 'opacity-40' : 'border-slate-200'}`;
+        input.addEventListener('change', () => {
+            const file = input.files[0];
 
-            const img = document.createElement('img');
-            img.className = 'aspect-[4/3] w-full object-cover';
-            img.alt = '';
-            img.src = URL.createObjectURL(file);
-            img.addEventListener('load', () => URL.revokeObjectURL(img.src));
+            if (!file) {
+                preview.classList.add('hidden');
 
-            const name = document.createElement('span');
-            name.className = 'absolute inset-x-0 bottom-0 truncate bg-slate-900/60 px-1 py-0.5 text-[10px] text-white';
-            name.textContent = file.name;
+                return;
+            }
 
-            tile.append(img, name);
-            preview.append(tile);
+            // A replacement photo wins over a pending "remove" tick on the
+            // same slot, so stop the checkbox from confusing the staff.
+            if (removeBox) {
+                removeBox.checked = false;
+            }
+
+            const url = URL.createObjectURL(file);
+            previewImg.src = url;
+            previewName.textContent = file.name;
+            preview.classList.remove('hidden');
+            previewImg.addEventListener('load', () => URL.revokeObjectURL(url), { once: true });
         });
-
-        if (files.length > room) {
-            const warn = document.createElement('p');
-            warn.dataset.photoWarning = '';
-            warn.className = 'mt-1 text-xs text-rose-600';
-            warn.textContent = room === 0
-                ? 'No gallery slots left — untick a current photo to free one up.'
-                : `Only ${room} slot${room === 1 ? '' : 's'} left — the extra photos will not be saved.`;
-            preview.after(warn);
-        }
-    }
-
-    input.addEventListener('change', render);
-    manager.querySelectorAll('input[name="remove_images[]"]').forEach((box) => {
-        box.addEventListener('change', render);
     });
 }
 

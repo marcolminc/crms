@@ -17,8 +17,19 @@ class Vehicle extends Model
 {
     use HasFactory, SoftDeletes;
 
-    /** Front, back, side, interior — plus a couple of spares for angles. */
-    public const MAX_PHOTOS = 6;
+    /**
+     * Named gallery slots in display order. One photo per slot keeps the
+     * catalogue coherent and tells the carousel what angle it is showing.
+     *
+     * @var array<string,string>
+     */
+    public const SLOTS = [
+        'front' => 'Front',
+        'side' => 'Side',
+        'back' => 'Back',
+        'interior' => 'Interior',
+        'extra' => 'Extra angle',
+    ];
 
     protected $fillable = [
         'plate_number',
@@ -116,23 +127,62 @@ class Vehicle extends Model
     }
 
     /**
-     * Photo gallery paths relative to the public disk. The uploaded gallery wins;
-     * a lone legacy image_path is kept as a fallback so older rows still show.
+     * Gallery as slot => path on the public disk. The images column holds a
+     * keyed map; a legacy plain list is re-keyed onto the slots in order so
+     * older rows stay manageable, and a lone image_path still works as a
+     * slot-less fallback.
      *
-     * @return list<string>
+     * @return array<string,string>
+     */
+    public function photoMap(): array
+    {
+        $images = is_array($this->images) ? $this->images : [];
+
+        if (array_is_list($images)) {
+            $legacy = [];
+            foreach ($images as $index => $path) {
+                if (is_string($path) && $path !== '') {
+                    $legacy[$index] = $path;
+                }
+            }
+            $images = [];
+            foreach (array_keys(self::SLOTS) as $slot) {
+                $path = array_shift($legacy);
+                if ($path !== null) {
+                    $images[$slot] = $path;
+                }
+            }
+        } else {
+            $ordered = [];
+            foreach (array_keys(self::SLOTS) as $slot) {
+                $path = $images[$slot] ?? null;
+                if (is_string($path) && $path !== '') {
+                    $ordered[$slot] = $path;
+                }
+            }
+            $images = $ordered;
+        }
+
+        return $images;
+    }
+
+    /**
+     * Ordered slides for the carousel.
+     *
+     * @return list<array{slot:?string,label:string,path:string}>
      */
     public function gallery(): array
     {
-        $paths = array_values(array_filter(
-            is_array($this->images) ? $this->images : [],
-            fn ($path): bool => is_string($path) && $path !== '',
-        ));
-
-        if ($paths === [] && is_string($this->image_path) && $this->image_path !== '') {
-            $paths = [$this->image_path];
+        $rows = [];
+        foreach ($this->photoMap() as $slot => $path) {
+            $rows[] = ['slot' => $slot, 'label' => self::SLOTS[$slot], 'path' => $path];
         }
 
-        return $paths;
+        if ($rows === [] && is_string($this->image_path) && $this->image_path !== '') {
+            $rows[] = ['slot' => null, 'label' => '', 'path' => $this->image_path];
+        }
+
+        return $rows;
     }
 
     public function hasPhotos(): bool

@@ -26,7 +26,7 @@ class StoreVehicleRequest extends FormRequest
 
     public function rules(): array
     {
-        return [
+        $rules = [
             'plate_number' => [
                 'required',
                 'string',
@@ -48,24 +48,33 @@ class StoreVehicleRequest extends FormRequest
             'description' => ['nullable', 'string', 'max:5000'],
             'features' => ['nullable', 'string', 'max:2000'],
             'image_path' => ['nullable', 'string', 'max:255'],
-            // Front/back/side/interior shots for the display carousel.
-            'photos' => ['nullable', 'array', 'max:'.Vehicle::MAX_PHOTOS],
-            'photos.*' => ['image', 'mimes:jpg,jpeg,png,webp', 'max:4096'],
             'remove_images' => ['nullable', 'array'],
             'remove_images.*' => ['string', 'max:255'],
+            // One photo per named angle so the carousel can caption its slides.
+            'photos' => ['nullable', 'array'],
         ];
+
+        foreach (array_keys(Vehicle::SLOTS) as $slot) {
+            $rules["photos.$slot"] = ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:4096'];
+        }
+
+        return $rules;
     }
 
     public function messages(): array
     {
-        return [
+        $messages = [
             'plate_number.regex' => 'The plate number may only contain letters, digits, spaces, hyphens and slashes (4-20 characters).',
             'plate_number.unique' => 'A vehicle with this plate number already exists.',
             'rate_per_day.gt' => 'The daily rate must be greater than zero.',
-            'photos.max' => 'A vehicle can have at most '.Vehicle::MAX_PHOTOS.' photos.',
-            'photos.*.image' => 'Each photo must be an image file.',
-            'photos.*.mimes' => 'Photos must be JPG, PNG or WebP files.',
-            'photos.*.max' => 'Each photo must be 4 MB or smaller.',
         ];
+
+        foreach (Vehicle::SLOTS as $slot => $label) {
+            $messages["photos.$slot.image"] = "The {$label} photo must be an image file.";
+            $messages["photos.$slot.mimes"] = "The {$label} photo must be a JPG, PNG or WebP file.";
+            $messages["photos.$slot.max"] = "The {$label} photo must be 4 MB or smaller.";
+        }
+
+        return $messages;
     }
 }
