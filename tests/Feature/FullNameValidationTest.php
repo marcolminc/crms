@@ -8,8 +8,9 @@ use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Tests\TestCase;
 
 /**
- * Readme: a full name is a name, not a number. "5672894" used to sail
- * through signup because the field only checked required/string/max.
+ * Readme: a full name is a name, not a username. Digits and stray symbols are
+ * refused ("5672894", "Ali Halisi775658", "bob_the_builder"), while ordinary
+ * names with spaces, hyphens, apostrophes and periods still pass.
  */
 class FullNameValidationTest extends TestCase
 {
@@ -44,19 +45,44 @@ class FullNameValidationTest extends TestCase
             ->assertSessionHasErrors('name');
     }
 
-    public function test_signup_still_accepts_names_that_contain_numbers_or_hyphens(): void
+    public function test_signup_rejects_a_name_with_embedded_numbers(): void
     {
         $this->from('/register')
             ->post('/register', [
-                'name' => 'Mariam 24-30 Hemisi',
-                'email' => 'mixedname@example.com',
+                'name' => 'Ali Halisi775658',
+                'email' => 'embedded@example.com',
                 'phone' => '0717777777',
                 'password' => 'passw0rd',
                 'password_confirmation' => 'passw0rd',
             ])
-            ->assertRedirect(route('customer.dashboard'));
+            ->assertSessionHasErrors('name');
 
-        $this->assertAuthenticated();
+        $this->assertGuest();
+        $this->assertDatabaseMissing('users', ['email' => 'embedded@example.com']);
+    }
+
+    public function test_ordinary_names_with_real_separators_are_accepted(): void
+    {
+        $user = User::factory()->customer()->create();
+
+        foreach (["Mary O'Connell", 'Jean-Pierre Habibu', 'Dr. Ali Hamisi', 'Zoë Amina'] as $good) {
+            $this->actingAs($user)->put(route('profile.update'), [
+                'name' => $good,
+                'email' => $user->email,
+            ])->assertSessionHasNoErrors("name {$good} should be accepted");
+        }
+    }
+
+    public function test_names_with_symbols_or_underscores_are_rejected(): void
+    {
+        $user = User::factory()->customer()->create();
+
+        foreach (['bob_the_builder', 'Ali <b>', 'name#1', 'A', 'Mariam 24-30'] as $bad) {
+            $this->actingAs($user)->put(route('profile.update'), [
+                'name' => $bad,
+                'email' => $user->email,
+            ])->assertSessionHasErrors('name', "name {$bad} should be rejected");
+        }
     }
 
     public function test_profile_update_rejects_an_all_number_name(): void
@@ -100,18 +126,22 @@ class FullNameValidationTest extends TestCase
 
     public function test_name_screens_carry_the_client_pattern(): void
     {
+        // Assert an apostrophe-free fragment; the full pattern contains a '
+        // which the component attribute bag encodes as &#039; in the raw HTML.
+        $expected = 'pattern="[A-Za-zÀ-ÿ][A-Za-zÀ-ÿ';
+
         $this->from('/register')->get('/register')
             ->assertOk()
-            ->assertSee('pattern="[A-Za-z]{2,}.*"', false);
+            ->assertSee($expected, false);
 
         $admin = User::factory()->admin()->create();
         $this->actingAs($admin)->get(route('admin.users.create'))
             ->assertOk()
-            ->assertSee('pattern="[A-Za-z]{2,}.*"', false);
+            ->assertSee($expected, false);
 
         $customer = User::factory()->customer()->create();
         $this->actingAs($customer)->get(route('profile.edit'))
             ->assertOk()
-            ->assertSee('pattern="[A-Za-z]{2,}.*"', false);
+            ->assertSee($expected, false);
     }
 }

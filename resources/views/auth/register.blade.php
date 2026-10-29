@@ -23,7 +23,7 @@
             <form method="POST" action="{{ route('register') }}">
                 @csrf
 
-                <x-field label="Full name" name="name" required pattern="[A-Za-z]{2,}.*" placeholder="e.g. Ali Hamisi" />
+                <x-field label="Full name" name="name" required pattern="[A-Za-zÀ-ÿ][A-Za-zÀ-ÿ'. -]*" minlength="2" placeholder="e.g. Ali Hamisi" />
                 <x-field label="Email address" name="email" type="email" required />
                 <x-field label="Phone number" name="phone" type="tel" required pattern="0[0-9]{9}" inputmode="numeric" maxlength="10" placeholder="e.g. 0123456789" />
                 <x-password required />

@@ -72,6 +72,15 @@
         ];
     }
 
+    // The public company pages are reachable from anywhere, so they join every
+    // actor's menu (staff, driver and customer alike) and drive the breadcrumb
+    // strip when one of them is the active page.
+    $groups['Company'] = [
+        ['label' => 'About us', 'route' => 'pages.about'],
+        ['label' => 'Contact us', 'route' => 'pages.contact'],
+        ['label' => 'Terms & conditions', 'route' => 'pages.terms'],
+    ];
+
     $isActive = function (array $link): bool {
         return request()->routeIs($link['pattern'] ?? $link['route'].'*');
     };

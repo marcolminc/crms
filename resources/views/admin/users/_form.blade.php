@@ -4,7 +4,7 @@
 @endphp
 
 <div class="grid gap-4 sm:grid-cols-2">
-    <x-field label="Full Name" name="name" :value="$user->name ?? ''" required pattern="[A-Za-z]{2,}.*" placeholder="e.g. Ali Hamisi" />
+    <x-field label="Full Name" name="name" :value="$user->name ?? ''" required pattern="[A-Za-zÀ-ÿ][A-Za-zÀ-ÿ'. -]*" minlength="2" placeholder="e.g. Ali Hamisi" />
     <x-field label="Email" name="email" type="email" :value="$user->email ?? ''" required />
     <x-field label="Phone" name="phone" type="tel" :value="$user->phone ?? ''" pattern="0[0-9]{9}" inputmode="numeric" maxlength="10" placeholder="e.g. 0123456789" />
 

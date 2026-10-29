@@ -82,12 +82,12 @@ class IdentifierValidationTest extends TestCase
         $this->actingAs($customer)->get(route('profile.edit'))
             ->assertOk()
             ->assertSee('pattern="[A-Za-z0-9]+([ /\-][A-Za-z0-9]+)*"', false)
-            ->assertSee('pattern="[A-Za-z]{2,}.*"', false);
+            ->assertSee('pattern="[A-Za-zÀ-ÿ][A-Za-zÀ-ÿ', false);
 
         $staff = User::factory()->counterAgent()->create();
         $this->actingAs($staff)->get(route('admin.customers.create'))
             ->assertOk()
             ->assertSee('pattern="[A-Za-z0-9]+([ /\-][A-Za-z0-9]+)*"', false)
-            ->assertSee('pattern="[A-Za-z]{2,}.*"', false);
+            ->assertSee('pattern="[A-Za-zÀ-ÿ][A-Za-zÀ-ÿ', false);
     }
 }

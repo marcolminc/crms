@@ -27,3 +27,7 @@ Homestead.json
 Homestead.yaml
 Thumbs.db
 
+# Local scratch readme — never commit this (README.md is the tracked project readme).
+/readme.txt
+/README.txt
+

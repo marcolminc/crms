@@ -22,7 +22,7 @@
     <x-field label="Date of birth" name="date_of_birth" type="date" :value="$customer?->date_of_birth?->format('Y-m-d')" max="{{ now()->subYears(18)->toDateString() }}" />
     <x-field label="City" name="city" :value="$customer?->city" maxlength="100" placeholder="e.g. Mwanza" />
     <x-field label="Address" name="address" :value="$customer?->address" maxlength="255" />
-    <x-field label="Emergency contact name" name="emergency_contact_name" :value="$customer?->emergency_contact_name" pattern="[A-Za-z]{2,}.*" maxlength="255" placeholder="e.g. Ali Hamisi" />
+    <x-field label="Emergency contact name" name="emergency_contact_name" :value="$customer?->emergency_contact_name" pattern="[A-Za-zÀ-ÿ][A-Za-zÀ-ÿ'. -]*" minlength="2" maxlength="255" placeholder="e.g. Ali Hamisi" />
     <x-field label="Emergency contact phone" name="emergency_contact_phone" type="tel" :value="$customer?->emergency_contact_phone" pattern="0[0-9]{9}" inputmode="numeric" maxlength="10" placeholder="e.g. 0123456789" />
 
     <div class="mb-4 sm:col-span-2 lg:col-span-3">

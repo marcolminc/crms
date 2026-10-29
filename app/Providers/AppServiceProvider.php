@@ -2,6 +2,9 @@
 
 namespace App\Providers;
 
+use App\Contracts\ContactMessageChannel;
+use App\Services\Contact\AdminAlertContactChannel;
+use App\Services\Contact\ContactMessageDispatcher;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
 
@@ -12,7 +15,17 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        // Public contact enquiries travel through a dispatcher so delivery is
+        // decoupled from the controller. Registering another
+        // ContactMessageChannel (e.g. an e-mail channel) here is all it takes
+        // to fan the enquiry out to a new destination.
+        $this->app->bind(ContactMessageChannel::class, AdminAlertContactChannel::class);
+        $this->app->bind(
+            ContactMessageDispatcher::class,
+            fn ($app) => new ContactMessageDispatcher([
+                $app->make(AdminAlertContactChannel::class),
+            ])
+        );
     }
 
     /**

@@ -27,10 +27,22 @@ use App\Http\Controllers\Customer\ReservationController as CustomerReservation;
 use App\Http\Controllers\Customer\RentalController as CustomerRental;
 use App\Http\Controllers\Driver\DashboardController as DriverDashboard;
 use App\Http\Controllers\Driver\RentalController as DriverRental;
+use App\Http\Controllers\PageController;
 use App\Http\Controllers\VehicleBrowseController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', [VehicleBrowseController::class, 'index'])->name('home');
+
+/*
+|----------------------------------------------------------------------
+| Public company pages — reachable whether or not a visitor is signed in
+|----------------------------------------------------------------------
+*/
+Route::get('about', [PageController::class, 'about'])->name('pages.about');
+Route::get('terms', [PageController::class, 'terms'])->name('pages.terms');
+Route::get('contact', [PageController::class, 'contact'])->name('pages.contact');
+Route::post('contact', [PageController::class, 'submit'])
+    ->middleware('throttle:8,1')->name('pages.contact.store');
 
 Route::middleware('guest')->group(function () {
     Route::get('register', [RegisterController::class, 'create'])->name('register');
