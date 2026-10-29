@@ -175,30 +175,34 @@ class VehicleGalleryTest extends TestCase
         );
     }
 
-    public function test_browse_cards_show_a_front_thumbnail_with_a_gallery_cue(): void
+    public function test_browse_cards_autoplay_a_control_free_carousel(): void
     {
         $withPhotos = Vehicle::factory()->available()->create([
             'images' => ['front' => 'vehicles/a.jpg', 'interior' => 'vehicles/b.jpg'],
         ]);
         $withoutPhotos = Vehicle::factory()->available()->create(['images' => null]);
 
-        $this->get('/vehicles')
+        $html = $this->get('/vehicles')
             ->assertOk()
-            // The rotating carousel is gone from the cards; it lives on the
-            // detail page now.
-            ->assertDontSee('data-carousel', false)
-            // The front photo is the cover, captioned, with a count cue.
-            ->assertSee('vehicles/a.jpg')
-            ->assertSee('Front')
-            ->assertSee('2 photos')
-            ->assertDontSee('Interior')
             ->assertSee('No photos yet')
             ->assertSee($withPhotos->plate_number)
-            ->assertSee($withoutPhotos->plate_number);
+            ->assertSee($withoutPhotos->plate_number)
+            ->getContent();
 
-        // The whole card is a link: the article is the positioning context and
-        // the title link stretches an overlay across it (thumbnail included).
-        $html = $this->get('/vehicles')->assertOk()->getContent();
+        // The card carries an auto-rotating carousel (both slides render) with a
+        // "2 photos" cue, but no manual controls, so the whole card stays a
+        // clean click-through link to the detail page.
+        $this->assertStringContainsString('data-carousel', $html);
+        $this->assertStringContainsString('vehicles/a.jpg', $html);
+        $this->assertStringContainsString('vehicles/b.jpg', $html);
+        $this->assertStringContainsString('2 photos', $html);
+        $this->assertStringNotContainsString('data-carousel-prev', $html);
+        $this->assertStringNotContainsString('data-carousel-next', $html);
+        $this->assertStringNotContainsString('data-carousel-toggle', $html);
+        $this->assertStringNotContainsString('data-carousel-dots', $html);
+
+        // Whole-card click-through: the article is the positioning context and
+        // the title link stretches an overlay across it (carousel included).
         $this->assertStringContainsString('<article class="relative', $html);
         $this->assertStringContainsString('after:absolute after:inset-0', $html);
     }
@@ -211,9 +215,14 @@ class VehicleGalleryTest extends TestCase
 
         // The legacy free-text image still shows as the cover...
         $this->assertStringContainsString('vehicles/legacy.jpg', $html);
-        // ...but a lone photo carries no carousel wiring and no multi-photo cue.
+        // ...but a lone photo is not wired as an autoplay carousel: the outer
+        // container gets no data-carousel/data-interval, and there is no
+        // multi-photo counter. (The inert data-carousel-track child always
+        // renders, so we assert on the attributes that only appear past one
+        // photo rather than the bare "data-carousel" substring.)
         $this->assertStringNotContainsString('data-interval', $html);
-        $this->assertStringNotContainsString('data-carousel', $html);
+        $this->assertStringNotContainsString('data-carousel-count', $html);
+        $this->assertStringNotContainsString('data-carousel data-interval', $html);
     }
 
     public function test_detail_page_carries_the_captioned_gallery_into_the_hero(): void
@@ -222,13 +231,20 @@ class VehicleGalleryTest extends TestCase
             'images' => ['front' => 'vehicles/hero-1.jpg', 'back' => 'vehicles/hero-2.jpg'],
         ]);
 
-        $this->get(route('vehicles.show', $vehicle))
+        $html = $this->get(route('vehicles.show', $vehicle))
             ->assertOk()
             ->assertSee('data-carousel', false)
             ->assertSee('vehicles/hero-1.jpg')
             ->assertSee('vehicles/hero-2.jpg')
             ->assertSee('data-slide-label="Front"', false)
-            ->assertSee('data-slide-label="Back"', false);
+            ->assertSee('data-slide-label="Back"', false)
+            ->getContent();
+
+        // The detail page has the full manual controls, including play/pause.
+        $this->assertStringContainsString('data-carousel-prev', $html);
+        $this->assertStringContainsString('data-carousel-next', $html);
+        $this->assertStringContainsString('data-carousel-dots', $html);
+        $this->assertStringContainsString('data-carousel-toggle', $html);
     }
 
     public function test_the_partial_endpoint_streams_the_next_page_of_cards(): void

@@ -1,4 +1,4 @@
-@props(['vehicle', 'ratio' => 'aspect-[4/3]', 'eager' => false])
+@props(['vehicle', 'ratio' => 'aspect-[4/3]', 'eager' => false, 'controls' => true])
 
 @php
     $photos = $vehicle->gallery();
@@ -31,21 +31,35 @@
         </div>
 
         @if ($count > 1)
-            <button type="button" data-carousel-prev aria-label="Previous photo"
-                    class="absolute left-2 top-1/2 -translate-y-1/2 rounded-full bg-white/70 p-1.5 text-slate-700 opacity-0 shadow transition-opacity duration-200 hover:bg-white focus-visible:opacity-100 group-hover:opacity-100">
-                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" aria-hidden="true">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
-                </svg>
-            </button>
-            <button type="button" data-carousel-next aria-label="Next photo"
-                    class="absolute right-2 top-1/2 -translate-y-1/2 rounded-full bg-white/70 p-1.5 text-slate-700 opacity-0 shadow transition-opacity duration-200 hover:bg-white focus-visible:opacity-100 group-hover:opacity-100">
-                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" aria-hidden="true">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
-                </svg>
-            </button>
             <span class="absolute right-2 top-2 rounded-full bg-slate-900/55 px-2 py-0.5 text-[11px] font-medium tabular-nums text-white"
                   data-carousel-count>{{ $count }} photos</span>
-            <div class="absolute inset-x-0 bottom-2 flex items-center justify-center gap-1.5" data-carousel-dots></div>
+
+            @if ($controls)
+                <button type="button" data-carousel-prev aria-label="Previous photo"
+                        class="absolute left-2 top-1/2 z-20 -translate-y-1/2 rounded-full bg-white/70 p-1.5 text-slate-700 opacity-0 shadow transition-opacity duration-200 hover:bg-white focus-visible:opacity-100 group-hover:opacity-100">
+                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
+                    </svg>
+                </button>
+                <button type="button" data-carousel-next aria-label="Next photo"
+                        class="absolute right-2 top-1/2 z-20 -translate-y-1/2 rounded-full bg-white/70 p-1.5 text-slate-700 opacity-0 shadow transition-opacity duration-200 hover:bg-white focus-visible:opacity-100 group-hover:opacity-100">
+                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
+                    </svg>
+                </button>
+
+                <button type="button" data-carousel-toggle aria-pressed="false" aria-label="Pause slideshow"
+                        class="absolute bottom-2 right-2 z-20 rounded-full bg-white/70 p-1.5 text-slate-700 shadow transition-colors duration-200 hover:bg-white focus-visible:opacity-100">
+                    <svg class="h-4 w-4" data-icon-pause fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M8 5.5A1.5 1.5 0 0 1 6.5 4h-1A1.5 1.5 0 0 0 4 5.5v13A1.5 1.5 0 0 0 5.5 20h1A1.5 1.5 0 0 0 8 18.5v-13Zm12 0A1.5 1.5 0 0 1 18.5 4h-1A1.5 1.5 0 0 0 16 5.5v13A1.5 1.5 0 0 0 17.5 20h1a1.5 1.5 0 0 0 1.5-1.5v-13Z" />
+                    </svg>
+                    <svg class="h-4 w-4 hidden" data-icon-play fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M6.5 4.5A1.5 1.5 0 0 0 5 6v12a1.5 1.5 0 0 0 2.3 1.28l10-6a1.5 1.5 0 0 0 0-2.56l-10-6A1.5 1.5 0 0 0 6.5 4.5Z" />
+                    </svg>
+                </button>
+
+                <div class="absolute inset-x-0 bottom-2 flex items-center justify-center gap-1.5" data-carousel-dots></div>
+            @endif
         @endif
     @endif
 </div>

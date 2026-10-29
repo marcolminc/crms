@@ -30,6 +30,7 @@ function initCarousels(root = document) {
         const track = car.querySelector('[data-carousel-track]');
         const dots = car.querySelector('[data-carousel-dots]');
         const counter = car.querySelector('[data-carousel-count]');
+        const toggle = car.querySelector('[data-carousel-toggle]');
         const total = track.children.length;
 
         if (total < 2) {
@@ -39,28 +40,37 @@ function initCarousels(root = document) {
         const ms = parseInt(car.dataset.interval || '3200', 10);
         let index = 0;
         let timer = null;
+        let userPaused = false;
 
-        // Dots double as angle shortcuts: "Front", "Interior", ...
+        // Dots double as angle shortcuts: "Front", "Interior", ... They only
+        // exist on the detail page; cards just autoplay without controls so the
+        // whole card stays a clean click-through link.
         const labels = [...track.children].map((slide) => slide.dataset.slideLabel || '');
 
-        for (let d = 0; d < total; d += 1) {
-            const button = document.createElement('button');
-            button.type = 'button';
-            button.setAttribute('aria-label', labels[d]
-                ? `Show ${labels[d]} photo`
-                : `Show photo ${d + 1} of ${total}`);
-            button.addEventListener('click', () => {
-                show(d);
-                restart();
-            });
-            dots.append(button);
+        if (dots) {
+            for (let d = 0; d < total; d += 1) {
+                const button = document.createElement('button');
+                button.type = 'button';
+                button.setAttribute('aria-label', labels[d]
+                    ? `Show ${labels[d]} photo`
+                    : `Show photo ${d + 1} of ${total}`);
+                button.addEventListener('click', () => {
+                    show(d);
+                    restart();
+                });
+                dots.append(button);
+            }
         }
 
         function render() {
             track.style.transform = `translateX(-${index * 100}%)`;
-            [...dots.children].forEach((b, d) => b.classList.toggle('vc-dot-active', d === index));
+            if (dots) {
+                [...dots.children].forEach((b, d) => b.classList.toggle('vc-dot-active', d === index));
+            }
 
-            if (counter) {
+            // The card pill stays a static "N photos" cue; only the detail page
+            // shows the live position counter.
+            if (counter && dots) {
                 counter.textContent = `${index + 1}/${total}`;
             }
         }
@@ -71,7 +81,7 @@ function initCarousels(root = document) {
         }
 
         function start() {
-            if (!reducedMotion && timer === null) {
+            if (!reducedMotion && !userPaused && timer === null) {
                 timer = window.setInterval(() => show(index + 1), ms);
             }
         }
@@ -93,16 +103,50 @@ function initCarousels(root = document) {
         car.addEventListener('focusin', stop);
         car.addEventListener('focusout', start);
 
-        car.querySelector('[data-carousel-prev]').addEventListener('click', (event) => {
-            event.preventDefault();
-            show(index - 1);
-            restart();
-        });
-        car.querySelector('[data-carousel-next]').addEventListener('click', (event) => {
-            event.preventDefault();
-            show(index + 1);
-            restart();
-        });
+        const prev = car.querySelector('[data-carousel-prev]');
+        const next = car.querySelector('[data-carousel-next]');
+
+        if (prev) {
+            prev.addEventListener('click', (event) => {
+                event.preventDefault();
+                show(index - 1);
+                restart();
+            });
+        }
+        if (next) {
+            next.addEventListener('click', (event) => {
+                event.preventDefault();
+                show(index + 1);
+                restart();
+            });
+        }
+
+        // Manual play/pause wins over hover/scroll: once paused it stays paused
+        // until the reader presses play again.
+        if (toggle) {
+            toggle.addEventListener('click', (event) => {
+                event.preventDefault();
+                userPaused = !userPaused;
+
+                if (userPaused) {
+                    stop();
+                } else {
+                    start();
+                }
+
+                toggle.setAttribute('aria-pressed', String(userPaused));
+                toggle.setAttribute('aria-label', userPaused ? 'Play slideshow' : 'Pause slideshow');
+
+                const pauseIcon = toggle.querySelector('[data-icon-pause]');
+                const playIcon = toggle.querySelector('[data-icon-play]');
+                if (pauseIcon) {
+                    pauseIcon.classList.toggle('hidden', userPaused);
+                }
+                if (playIcon) {
+                    playIcon.classList.toggle('hidden', !userPaused);
+                }
+            });
+        }
 
         let touchX = null;
         track.addEventListener('touchstart', (event) => {

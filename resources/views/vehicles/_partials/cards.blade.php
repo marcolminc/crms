@@ -6,7 +6,7 @@
     <article class="relative overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition duration-300 hover:-translate-y-0.5 hover:border-emerald-300 hover:shadow-md"
              data-reveal style="--reveal-delay: {{ ($loop->index % 3) * 90 }}ms">
         <div class="relative">
-            <x-vehicle-thumbnail :vehicle="$vehicle" ratio="aspect-[16/10]" />
+            <x-vehicle-carousel :vehicle="$vehicle" ratio="aspect-[16/10]" :controls="false" />
             <div class="pointer-events-none absolute left-3 top-3">
                 <x-badge :value="$vehicle->status->value" />
             </div>
